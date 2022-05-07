@@ -33,20 +33,45 @@ fn main() {
 #[derive(Debug)]
 struct Setup {
     pub name: String,
-    pub args: Vec<String>,
+    pub pass: Vec<Pass>,
 }
 
 impl Setup {
     pub fn new(block: &Vec<&str>) -> Self {
         let mut name = String::new();
-        let mut args = Vec::new();
+        let mut pass = Vec::new();
         block.iter().for_each(|line| {
             if line.starts_with("[") {
                 name.push_str(line.trim_start_matches("[").trim_end_matches("]"));
             } else {
-                args.push(String::from(*line));
+                let mut is_input = true;
+                let line = if line.starts_with(">") {
+                    is_input = false;
+                    &line[1..]
+                } else if line.starts_with("|") {
+                    &line[1..]
+                } else {
+                    &line[..]
+                };
+                if is_input {
+                    pass.push(Pass::InputDirectLike(String::from(line)));
+                } else {
+                    pass.push(Pass::ParamDirectLike(String::from(line)));
+                }
             }
         });
-        Self { name, args }
+        Setup { name, pass }
     }
+}
+
+#[derive(Debug)]
+enum Pass {
+    ParamDirectLike(String),
+    ParamExpectAllOf(String),
+    ParamExpectEachOf(String),
+    ParamExpectNthOf(u32, String),
+    InputDirectLike(String),
+    InputExpectAllOf(String),
+    InputExpectEachOf(String),
+    InputExpectNthOf(u32, String),
 }
