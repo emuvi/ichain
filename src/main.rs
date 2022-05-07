@@ -75,3 +75,17 @@ enum Pass {
     InputExpectEachOf(String),
     InputExpectNthOf(u32, String),
 }
+
+#[derive(Debug)]
+enum PassTo {
+    Param,
+    Input,
+}
+
+#[derive(Debug)]
+enum PassOn {
+    DirectLike(String),
+    ExpectAllOf(String),
+    ExpectEachOf(String),
+    ExpectNthOf(u32, String),
+}
