@@ -32,8 +32,8 @@ fn main() {
 
 #[derive(Debug)]
 struct Setup {
-    pub name: String,
-    pub pass: Vec<Pass>,
+    name: String,
+    ways: Vec<Pass>,
 }
 
 impl Setup {
@@ -65,15 +65,9 @@ impl Setup {
 }
 
 #[derive(Debug)]
-enum Pass {
-    ParamDirectLike(String),
-    ParamExpectAllOf(String),
-    ParamExpectEachOf(String),
-    ParamExpectNthOf(u32, String),
-    InputDirectLike(String),
-    InputExpectAllOf(String),
-    InputExpectEachOf(String),
-    InputExpectNthOf(u32, String),
+struct Pass {
+    pass_to: PassTo,
+    pass_on: PassOn,
 }
 
 #[derive(Debug)]
