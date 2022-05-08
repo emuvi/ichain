@@ -1,5 +1,7 @@
 mod clip;
 
+mod exec;
+
 fn main() {
     let args = clip::parse();
     let input = args
@@ -7,14 +9,14 @@ fn main() {
         .expect("You have to pass an input argument.");
     let contents =
         std::fs::read_to_string(input).expect("Something went wrong reading the input file.");
-    let mut setups: Vec<Setup> = Vec::new();
+    let mut chaineds: Vec<Chained> = Vec::new();
     let mut block: Vec<&str> = Vec::new();
     contents.lines().for_each(|line| {
         let line = line.trim();
         if !line.is_empty() {
             if line.starts_with("[") {
                 if !block.is_empty() {
-                    setups.push(Setup::new(&block));
+                    chaineds.push(Chained::new(&block));
                     block.clear();
                 }
             }
@@ -22,25 +24,26 @@ fn main() {
         }
     });
     if !block.is_empty() {
-        setups.push(Setup::new(&block));
+        chaineds.push(Chained::new(&block));
         block.clear();
     }
     if args.is_present("verbose") {
         println!("Chained:");
-        setups.iter().for_each(|setup| {
+        chaineds.iter().for_each(|setup| {
             println!("Name: {}", setup.name);
             println!("Ways: {:?}", setup.ways);
         });
     }
+    exec::start(chaineds);
 }
 
 #[derive(Debug)]
-struct Setup {
-    name: String,
-    ways: Vec<(PassTo, PassOn)>,
+pub struct Chained {
+    pub name: String,
+    pub ways: Vec<(PassTo, PassOn)>,
 }
 
-impl Setup {
+impl Chained {
     pub fn new(block: &Vec<&str>) -> Self {
         let mut name = String::new();
         let mut ways = Vec::new();
@@ -59,18 +62,18 @@ impl Setup {
                 }
             }
         });
-        Setup { name, ways }
+        Chained { name, ways }
     }
 }
 
 #[derive(Debug)]
-enum PassTo {
+pub enum PassTo {
     Param,
     Input,
 }
 
 #[derive(Debug)]
-enum PassOn {
+pub enum PassOn {
     DirectLike(String),
     ExpectAllOf(String),
     ExpectEachOf(String),
