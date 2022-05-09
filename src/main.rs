@@ -1,5 +1,5 @@
 mod clip;
-mod exec;
+mod runner;
 mod setup;
 
 use setup::Chained;
@@ -36,5 +36,5 @@ fn main() {
             println!("Ways: {:?}", setup.ways);
         });
     }
-    exec::start(chaineds);
+    runner::start(chaineds);
 }

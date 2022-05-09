@@ -92,12 +92,9 @@ fn try_push_new_pass_on(of_setup_part: &str, on_results: &mut Vec<PassOn>) {
     if of_setup_part.starts_with("$") {
         if let Some(dot) = of_setup_part.find(".") {
             let name = &of_setup_part[1..dot];
-            let findFrom = of_setup_part.find(":");
-            let (what, from) = if let Some(fromPos) = findFrom {
-                (
-                    &of_setup_part[dot + 1..fromPos],
-                    &of_setup_part[fromPos + 1..],
-                )
+            let from = of_setup_part.find(":");
+            let (what, from) = if let Some(from) = from {
+                (&of_setup_part[dot + 1..from], &of_setup_part[from + 1..])
             } else {
                 (&of_setup_part[dot + 1..], "out")
             };
