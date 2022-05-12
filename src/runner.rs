@@ -68,7 +68,7 @@ fn execute(chained: Chained, results: Results) {
                 }
                 &PassOn::ExpectNthErrOf(ref nth, ref of) => {
                     rux_dbg_step!(nth, of);
-                    command.arg(get_nth_err_of(nth, of, results.clone()));
+                    command.arg(get_nth_err_of(*nth, of, results.clone()));
                 }
                 &PassOn::ExpectAllOutOf(ref name) => {
                     rux_dbg_step!(name);
@@ -82,7 +82,7 @@ fn execute(chained: Chained, results: Results) {
                 }
                 &PassOn::ExpectNthOutOf(ref nth, ref of) => {
                     rux_dbg_step!(nth, of);
-                    command.arg(get_nth_out_of(nth, of, results.clone()));
+                    command.arg(get_nth_out_of(*nth, of, results.clone()));
                 }
             }
         }
@@ -100,6 +100,8 @@ fn execute(chained: Chained, results: Results) {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
+
+    // [ TODO ] - It is been piped together stdout with stderr. Make a Stdio to pipe.
 
     let write_in = if chained.has_inputs() {
         let stdin = child.stdin.unwrap();
@@ -211,15 +213,15 @@ fn get_all_err_of_vected(name: &str, results: Results) -> Vec<String> {
     }
 }
 
-fn get_nth_err_of(nth: &usize, name: &str, results: Results) -> String {
+fn get_nth_err_of(nth: usize, name: &str, results: Results) -> String {
     rux_dbg_call!(nth, name, results);
     loop {
         for process in results.read().unwrap().iter() {
             let reader = process.read().unwrap();
             if reader.name == name {
                 rux_dbg_step!(reader.errs.len());
-                if reader.errs.len() > *nth {
-                    rux_dbg_reav!(reader.errs[*nth].clone());
+                if nth < reader.errs.len() {
+                    rux_dbg_reav!(reader.errs[nth].clone());
                 }
                 rux_dbg_step!(reader.done);
                 if reader.done {
@@ -267,15 +269,15 @@ fn get_all_out_of_vected(name: &str, results: Results) -> Vec<String> {
     }
 }
 
-fn get_nth_out_of(nth: &usize, name: &str, results: Results) -> String {
+fn get_nth_out_of(nth: usize, name: &str, results: Results) -> String {
     rux_dbg_call!(nth, name, results);
     loop {
         for process in results.read().unwrap().iter() {
             let reader = process.read().unwrap();
             if reader.name == name {
-                rux_dbg_step!(reader.errs.len());
-                if reader.outs.len() > *nth {
-                    rux_dbg_reav!(reader.outs[*nth].clone());
+                rux_dbg_step!(reader.outs.len());
+                if nth < reader.outs.len() {
+                    rux_dbg_reav!(reader.outs[nth].clone());
                 }
                 rux_dbg_step!(reader.done);
                 if reader.done {
