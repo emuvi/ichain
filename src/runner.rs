@@ -9,12 +9,12 @@ use crate::setup::PassTo;
 
 use rubx::{rux_dbg_call, rux_dbg_reav, rux_dbg_step};
 
-pub fn start(chaineds: Vec<Chained>) {
-    rux_dbg_call!(chaineds);
+pub fn start(ichain: Vec<Chained>) {
+    rux_dbg_call!(ichain);
     let results: Results = Arc::new(RwLock::new(Vec::new()));
     rux_dbg_step!(results);
     let mut handles: Vec<JoinHandle<()>> = Vec::new();
-    for chained in chaineds {
+    for chained in ichain {
         let results = results.clone();
         handles.push(thread::spawn(move || execute(chained, results)));
     }
@@ -62,7 +62,7 @@ fn execute(chained: Chained, results: Results) {
                 }
                 &PassOn::ExpectEachErrOf(ref name) => {
                     rux_dbg_step!(name);
-                    for argument in get_all_err_of_vected(name, results.clone()) {
+                    for argument in get_all_err_of_on_vec(name, results.clone()) {
                         command.arg(argument);
                     }
                 }
@@ -76,7 +76,7 @@ fn execute(chained: Chained, results: Results) {
                 }
                 &PassOn::ExpectEachOutOf(ref name) => {
                     rux_dbg_step!(name);
-                    for argument in get_all_out_of_vected(name, results.clone()) {
+                    for argument in get_all_out_of_on_vec(name, results.clone()) {
                         command.arg(argument);
                     }
                 }
@@ -196,7 +196,7 @@ fn get_all_err_of_lined(name: &str, results: Results) -> String {
     }
 }
 
-fn get_all_err_of_vected(name: &str, results: Results) -> Vec<String> {
+fn get_all_err_of_on_vec(name: &str, results: Results) -> Vec<String> {
     rux_dbg_call!(name, results);
     loop {
         for process in results.read().unwrap().iter() {
@@ -252,7 +252,7 @@ fn get_all_out_of_lined(name: &str, results: Results) -> String {
     }
 }
 
-fn get_all_out_of_vected(name: &str, results: Results) -> Vec<String> {
+fn get_all_out_of_on_vec(name: &str, results: Results) -> Vec<String> {
     rux_dbg_call!(name, results);
     loop {
         for process in results.read().unwrap().iter() {

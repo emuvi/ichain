@@ -3,7 +3,7 @@ use clap::{Arg, ArgMatches, Command};
 pub fn parse() -> ArgMatches {
     Command::new("ichain")
         .version(clap::crate_version!())
-        .about("IChain is a command program that chains muliple executions of programs passing inputs and outputs as configured in a INI like file.")
+        .about("IChain is a command program that chains multiple executions of programs in parallel passing inputs and outputs between then as configured in a ICH file.")
         .author("Éverton M. Vieira <everton.muvi@gmail.com>")
         .arg(
             Arg::new("verbose")
@@ -27,7 +27,7 @@ pub fn parse() -> ArgMatches {
                 .long("debug-calls")
                 .takes_value(false)
                 .required(false)
-                .help("If has debug symbols, is debuged the functions calls."),
+                .help("If has debug symbols, is debugged the functions calls."),
         )
         .arg(
             Arg::new("debug-reavs")
@@ -35,7 +35,7 @@ pub fn parse() -> ArgMatches {
                 .long("debug-reavs")
                 .takes_value(false)
                 .required(false)
-                .help("If has debug symbols, is debuged the functions returns."),
+                .help("If has debug symbols, is debugged the functions returns."),
         )
         .arg(
             Arg::new("debug-steps")
@@ -43,7 +43,7 @@ pub fn parse() -> ArgMatches {
                 .long("debug-steps")
                 .takes_value(false)
                 .required(false)
-                .help("If has debug symbols, is debuged the functions operations."),
+                .help("If has debug symbols, is debugged the functions operations."),
         )
         .arg(
             Arg::new("debug-tells")
@@ -51,7 +51,7 @@ pub fn parse() -> ArgMatches {
                 .long("debug-tells")
                 .takes_value(false)
                 .required(false)
-                .help("If has debug symbols, is debuged the functions iterations."),
+                .help("If has debug symbols, is debugged the functions iterations."),
         )
         .arg(
             Arg::new("input")
