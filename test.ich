@@ -2,4 +2,4 @@
 >"argument passed to reecho"
 
 [longwrite]
->-a -t 10 -l $reargs.all -o test.txt
+>-a -t 10 -l $reargs -o test.txt
