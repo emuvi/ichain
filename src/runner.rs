@@ -101,8 +101,6 @@ fn execute(chained: Chained, results: Results) {
         .spawn()
         .unwrap();
 
-    // [ TODO ] - It is been piped together stdout with stderr. Make a Stdio to pipe.
-
     let write_in = if chained.has_inputs() {
         let stdin = child.stdin.unwrap();
         let mut writer = BufWriter::new(stdin);
