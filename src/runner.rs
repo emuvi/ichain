@@ -89,13 +89,7 @@ fn execute(chained: Chained, chaining: Chaining) {
         rux_dbg_step!(to, on);
         if to == PassTo::Input {
           rux_dbg_step!(to);
-          let get_inputs = GetInputs {
-            _of: chaining.clone(),
-            got: 0,
-            on,
-          };
-          rux_dbg_step!(get_inputs);
-          for line in get_inputs.into_iter() {
+          for line in chaining.get_from(on) {
             rux_dbg_step!(line);
             writer.write(line.as_bytes()).unwrap();
             writer.write("\n".as_bytes()).unwrap();
@@ -155,31 +149,4 @@ fn execute(chained: Chained, chaining: Chaining) {
   read_err.join().unwrap();
   read_out.join().unwrap();
   stocking.set_done();
-}
-
-#[derive(Debug)]
-struct GetInputs {
-  _of: Chaining,
-  got: usize,
-  on: PassOn,
-}
-
-impl Iterator for GetInputs {
-  type Item = String;
-  fn next(&mut self) -> Option<String> {
-    match self.on {
-      PassOn::DirectLike(ref value) => {
-        if self.got == 0 {
-          self.got += 1;
-          return value.clone().into();
-        } else {
-          return None;
-        }
-      }
-      _ => {
-        eprintln!("Get Input from {:?} not supported yet", self.on);
-      }
-    }
-    None
-  }
 }
