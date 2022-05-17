@@ -25,6 +25,15 @@ impl Chained {
         });
         Chained { name, ways }
     }
+
+    pub fn has_inputs(&self) -> bool {
+        for (to, _) in &self.ways {
+            if to == &PassTo::Input {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 #[derive(Debug, PartialEq)]

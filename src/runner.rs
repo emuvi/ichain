@@ -1,22 +1,22 @@
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::process::{Command, Stdio};
-use std::sync::{Arc, RwLock};
 use std::thread::{self, JoinHandle};
 
+use rubx::{rux_dbg_call, rux_dbg_step};
+
+use crate::flow::Chaining;
 use crate::setup::Chained;
 use crate::setup::PassOn;
 use crate::setup::PassTo;
 
-use rubx::{rux_dbg_call, rux_dbg_reav, rux_dbg_step};
-
 pub fn start(ichain: Vec<Chained>) {
     rux_dbg_call!(ichain);
-    let results: Results = Arc::new(RwLock::new(Vec::new()));
-    rux_dbg_step!(results);
+    let chaining = Chaining::new();
+    rux_dbg_step!(chaining);
     let mut handles: Vec<JoinHandle<()>> = Vec::new();
     for chained in ichain {
-        let results = results.clone();
-        handles.push(thread::spawn(move || execute(chained, results)));
+        let chaining_cloned = chaining.clone();
+        handles.push(thread::spawn(move || execute(chained, chaining_cloned)));
     }
     rux_dbg_step!(handles);
     for handle in handles {
@@ -24,30 +24,10 @@ pub fn start(ichain: Vec<Chained>) {
     }
 }
 
-type Results = Arc<RwLock<Vec<Processing>>>;
-
-type Processing = Arc<RwLock<Process>>;
-
-#[derive(Debug)]
-struct Process {
-    name: String,
-    errs: Vec<String>,
-    outs: Vec<String>,
-    done: bool,
-}
-
-fn execute(chained: Chained, results: Results) {
-    rux_dbg_call!(chained, results);
-    let processing = Arc::new(RwLock::new(Process {
-        name: chained.name.clone(),
-        errs: Vec::new(),
-        outs: Vec::new(),
-        done: false,
-    }));
-    rux_dbg_step!(processing);
-    results.write().unwrap().push(processing.clone());
-    rux_dbg_step!(results);
-    let mut command = Command::new(chained.name.clone());
+fn execute(chained: Chained, chaining: Chaining) {
+    rux_dbg_call!(chained, chaining);
+    let stocking = chaining.add(&chained.name);
+    let mut command = Command::new(&chained.name);
     chained.ways.iter().for_each(|(to, on)| {
         rux_dbg_step!(to, on);
         if to == &PassTo::Param {
@@ -58,31 +38,31 @@ fn execute(chained: Chained, results: Results) {
                 }
                 &PassOn::ExpectAllErrOf(ref name) => {
                     rux_dbg_step!(name);
-                    command.arg(get_all_err_of_lined(name, results.clone()));
+                    command.arg(chaining.get_all_err_of_lined(name));
                 }
                 &PassOn::ExpectEachErrOf(ref name) => {
                     rux_dbg_step!(name);
-                    for argument in get_all_err_of_on_vec(name, results.clone()) {
+                    for argument in chaining.get_all_err_of_on_vec(name) {
                         command.arg(argument);
                     }
                 }
                 &PassOn::ExpectNthErrOf(ref nth, ref of) => {
                     rux_dbg_step!(nth, of);
-                    command.arg(get_nth_err_of(*nth, of, results.clone()));
+                    command.arg(chaining.get_nth_err_of(of, *nth));
                 }
                 &PassOn::ExpectAllOutOf(ref name) => {
                     rux_dbg_step!(name);
-                    command.arg(get_all_out_of_lined(name, results.clone()));
+                    command.arg(chaining.get_all_out_of_lined(name));
                 }
                 &PassOn::ExpectEachOutOf(ref name) => {
                     rux_dbg_step!(name);
-                    for argument in get_all_out_of_on_vec(name, results.clone()) {
+                    for argument in chaining.get_all_out_of_on_vec(name) {
                         command.arg(argument);
                     }
                 }
                 &PassOn::ExpectNthOutOf(ref nth, ref of) => {
                     rux_dbg_step!(nth, of);
-                    command.arg(get_nth_out_of(*nth, of, results.clone()));
+                    command.arg(chaining.get_nth_out_of(of, *nth));
                 }
             }
         }
@@ -110,7 +90,7 @@ fn execute(chained: Chained, results: Results) {
                 if to == PassTo::Input {
                     rux_dbg_step!(to);
                     let get_inputs = GetInputs {
-                        of: results.clone(),
+                        _of: chaining.clone(),
                         got: 0,
                         on,
                     };
@@ -130,7 +110,7 @@ fn execute(chained: Chained, results: Results) {
 
     let read_err = {
         let stderr = child.stderr.unwrap();
-        let process = processing.clone();
+        let stocking = stocking.clone();
         thread::spawn(move || {
             let mut reader = BufReader::new(stderr);
             let mut err_line = String::new();
@@ -142,7 +122,7 @@ fn execute(chained: Chained, results: Results) {
                     break;
                 } else {
                     rux_dbg_step!(err_line);
-                    process.write().unwrap().errs.push(err_line.clone());
+                    stocking.put_err(&err_line);
                 }
             }
         })
@@ -151,7 +131,7 @@ fn execute(chained: Chained, results: Results) {
 
     let read_out = {
         let stdout = child.stdout.unwrap();
-        let process = processing.clone();
+        let stocking = stocking.clone();
         thread::spawn(move || {
             let mut reader = BufReader::new(stdout);
             let mut out_line = String::new();
@@ -163,7 +143,7 @@ fn execute(chained: Chained, results: Results) {
                     break;
                 } else {
                     rux_dbg_step!(out_line);
-                    process.write().unwrap().outs.push(out_line.clone());
+                    stocking.put_out(&out_line);
                 }
             }
         })
@@ -174,135 +154,12 @@ fn execute(chained: Chained, results: Results) {
     }
     read_err.join().unwrap();
     read_out.join().unwrap();
-    processing.write().unwrap().done = true;
-}
-
-fn get_all_err_of_lined(name: &str, results: Results) -> String {
-    rux_dbg_call!(name, results);
-    loop {
-        for process in results.read().unwrap().iter() {
-            let reader = process.read().unwrap();
-            if reader.name == name {
-                rux_dbg_step!(reader.done);
-                if reader.done {
-                    rux_dbg_reav!(reader.errs.join(" "));
-                }
-            }
-        }
-        rux_dbg_step!();
-        thread::sleep(std::time::Duration::from_millis(10));
-    }
-}
-
-fn get_all_err_of_on_vec(name: &str, results: Results) -> Vec<String> {
-    rux_dbg_call!(name, results);
-    loop {
-        for process in results.read().unwrap().iter() {
-            let reader = process.read().unwrap();
-            if reader.name == name {
-                rux_dbg_step!(reader.done);
-                if reader.done {
-                    rux_dbg_reav!(reader.errs.clone());
-                }
-            }
-        }
-        rux_dbg_step!();
-        thread::sleep(std::time::Duration::from_millis(10));
-    }
-}
-
-fn get_nth_err_of(nth: usize, name: &str, results: Results) -> String {
-    rux_dbg_call!(nth, name, results);
-    loop {
-        for process in results.read().unwrap().iter() {
-            let reader = process.read().unwrap();
-            if reader.name == name {
-                rux_dbg_step!(reader.errs.len());
-                if nth < reader.errs.len() {
-                    rux_dbg_reav!(reader.errs[nth].clone());
-                }
-                rux_dbg_step!(reader.done);
-                if reader.done {
-                    eprintln!("Nth {} Err of {} will never come.", nth, name);
-                    rux_dbg_reav!(String::new());
-                }
-            }
-        }
-        rux_dbg_step!();
-        thread::sleep(std::time::Duration::from_millis(10));
-    }
-}
-
-fn get_all_out_of_lined(name: &str, results: Results) -> String {
-    rux_dbg_call!(name, results);
-    loop {
-        for process in results.read().unwrap().iter() {
-            let reader = process.read().unwrap();
-            if reader.name == name {
-                rux_dbg_step!(reader.done);
-                if reader.done {
-                    rux_dbg_reav!(reader.outs.join(" "));
-                }
-            }
-        }
-        rux_dbg_step!();
-        thread::sleep(std::time::Duration::from_millis(10));
-    }
-}
-
-fn get_all_out_of_on_vec(name: &str, results: Results) -> Vec<String> {
-    rux_dbg_call!(name, results);
-    loop {
-        for process in results.read().unwrap().iter() {
-            let reader = process.read().unwrap();
-            if reader.name == name {
-                rux_dbg_step!(reader.done);
-                if reader.done {
-                    rux_dbg_reav!(reader.outs.clone());
-                }
-            }
-        }
-        rux_dbg_step!();
-        thread::sleep(std::time::Duration::from_millis(10));
-    }
-}
-
-fn get_nth_out_of(nth: usize, name: &str, results: Results) -> String {
-    rux_dbg_call!(nth, name, results);
-    loop {
-        for process in results.read().unwrap().iter() {
-            let reader = process.read().unwrap();
-            if reader.name == name {
-                rux_dbg_step!(reader.outs.len());
-                if nth < reader.outs.len() {
-                    rux_dbg_reav!(reader.outs[nth].clone());
-                }
-                rux_dbg_step!(reader.done);
-                if reader.done {
-                    eprintln!("Nth {} Out of {} will never come.", nth, name);
-                    rux_dbg_reav!(String::new());
-                }
-            }
-        }
-        rux_dbg_step!();
-        thread::sleep(std::time::Duration::from_millis(10));
-    }
-}
-
-impl Chained {
-    fn has_inputs(&self) -> bool {
-        for (to, _) in &self.ways {
-            if to == &PassTo::Input {
-                return true;
-            }
-        }
-        false
-    }
+    stocking.set_done();
 }
 
 #[derive(Debug)]
 struct GetInputs {
-    of: Results,
+    _of: Chaining,
     got: usize,
     on: PassOn,
 }
