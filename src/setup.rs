@@ -42,7 +42,7 @@ pub enum PassTo {
   Input,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum PassOn {
   DirectLike(String),
   ExpectAllOutOf(String),

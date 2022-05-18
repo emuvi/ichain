@@ -8,11 +8,8 @@ use setup::Chained;
 
 fn main() {
   let args = clip::parse();
-  if args.is_present("verbose") {
-    rubx::rux_debug::put_verbose();
-  }
-  if args.is_present("archive") {
-    rubx::rux_debug::put_archive();
+  if args.is_present("debug-times") {
+    rubx::rux_debug::put_dbg_times();
   }
   if args.is_present("debug-calls") {
     rubx::rux_debug::put_dbg_calls();
@@ -25,6 +22,19 @@ fn main() {
   }
   if args.is_present("debug-tells") {
     rubx::rux_debug::put_dbg_tells();
+  }
+  if args.is_present("verbose") {
+    rubx::rux_debug::put_verbose();
+  }
+  if args.is_present("archive") {
+    rubx::rux_debug::put_archive();
+  }
+
+  if args.is_present("delay") {
+    let delay = args
+      .value_of("delay")
+      .expect("Was expected a delay argument.");
+    flow::set_delay(delay.parse().expect("Could not parse the delay argument."));
   }
   let input = args
     .value_of("input")

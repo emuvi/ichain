@@ -2,21 +2,26 @@ use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::process::{Command, Stdio};
 use std::thread::{self, JoinHandle};
 
-use rubx::{rux_dbg_call, rux_dbg_step};
+use rubx::{
+  rux_dbg_call, rux_dbg_ifis, rux_dbg_lets, rux_dbg_muts, rux_dbg_reav, rux_dbg_step,
+};
 
 use crate::flow::Chaining;
 use crate::setup::Chained;
-use crate::setup::PassOn;
 use crate::setup::PassTo;
 
 pub fn start(ichain: Vec<Chained>) {
   rux_dbg_call!(ichain);
-  let chaining = Chaining::new();
-  rux_dbg_step!(chaining);
+  let chaining = rux_dbg_lets!(Chaining::new());
   let mut handles: Vec<JoinHandle<()>> = Vec::new();
   for chained in ichain {
     let chaining_cloned = chaining.clone();
-    handles.push(thread::spawn(move || execute(chained, chaining_cloned)));
+    handles.push(
+      thread::Builder::new()
+        .name(chained.name.clone())
+        .spawn(move || execute(chained, chaining_cloned))
+        .expect("Could not create the thread for the chained."),
+    );
   }
   rux_dbg_step!(handles);
   for handle in handles {
@@ -31,49 +36,17 @@ fn execute(chained: Chained, chaining: Chaining) {
   chained.ways.iter().for_each(|(to, on)| {
     rux_dbg_step!(to, on);
     if to == &PassTo::Param {
-      match on {
-        &PassOn::DirectLike(ref value) => {
-          rux_dbg_step!(value);
-          command.arg(value);
-        }
-        &PassOn::ExpectAllErrOf(ref name) => {
-          rux_dbg_step!(name);
-          command.arg(chaining.get_all_err_of_lined(name));
-        }
-        &PassOn::ExpectEachErrOf(ref name) => {
-          rux_dbg_step!(name);
-          for argument in chaining.get_all_err_of_on_vec(name) {
-            command.arg(argument);
-          }
-        }
-        &PassOn::ExpectNthErrOf(ref nth, ref of) => {
-          rux_dbg_step!(nth, of);
-          command.arg(chaining.get_nth_err_of(of, *nth));
-        }
-        &PassOn::ExpectAllOutOf(ref name) => {
-          rux_dbg_step!(name);
-          command.arg(chaining.get_all_out_of_lined(name));
-        }
-        &PassOn::ExpectEachOutOf(ref name) => {
-          rux_dbg_step!(name);
-          for argument in chaining.get_all_out_of_on_vec(name) {
-            command.arg(argument);
-          }
-        }
-        &PassOn::ExpectNthOutOf(ref nth, ref of) => {
-          rux_dbg_step!(nth, of);
-          command.arg(chaining.get_nth_out_of(of, *nth));
-        }
+      for passed in chaining.get_from(on.clone()) {
+        rux_dbg_step!(passed);
+        command.arg(passed);
       }
     }
   });
 
   let child = command
     .stdin(if chained.has_inputs() {
-      rux_dbg_step!();
       Stdio::piped()
     } else {
-      rux_dbg_step!();
       Stdio::null()
     })
     .stdout(Stdio::piped())
@@ -84,19 +57,23 @@ fn execute(chained: Chained, chaining: Chaining) {
   let write_in = if chained.has_inputs() {
     let stdin = child.stdin.unwrap();
     let mut writer = BufWriter::new(stdin);
-    Some(thread::spawn(move || {
-      for (to, on) in chained.ways {
-        rux_dbg_step!(to, on);
-        if to == PassTo::Input {
-          rux_dbg_step!(to);
-          for line in chaining.get_from(on) {
-            rux_dbg_step!(line);
-            writer.write(line.as_bytes()).unwrap();
-            writer.write("\n".as_bytes()).unwrap();
+    Some(
+      thread::Builder::new()
+        .name(format!("{}_in", &chained.name))
+        .spawn(move || {
+          for (to, on) in chained.ways {
+            rux_dbg_step!(to, on);
+            if to == PassTo::Input {
+              rux_dbg_step!(to);
+              for passed in chaining.get_from(on) {
+                rux_dbg_step!(passed);
+                writer.write(passed.as_bytes()).unwrap();
+              }
+            }
           }
-        }
-      }
-    }))
+        })
+        .expect(&format!("Could not create the thread {}_in", &chained.name)),
+    )
   } else {
     None
   };
@@ -105,42 +82,54 @@ fn execute(chained: Chained, chaining: Chaining) {
   let read_err = {
     let stderr = child.stderr.unwrap();
     let stocking = stocking.clone();
-    thread::spawn(move || {
-      let mut reader = BufReader::new(stderr);
-      let mut err_line = String::new();
-      loop {
-        err_line.clear();
-        let size = reader.read_line(&mut err_line).unwrap();
-        rux_dbg_step!(size);
-        if size == 0 {
-          break;
-        } else {
-          rux_dbg_step!(err_line);
-          stocking.put_err(&err_line);
+    thread::Builder::new()
+      .name(format!("{}_err", &chained.name))
+      .spawn(move || {
+        let mut reader = BufReader::new(stderr);
+        let mut err_line = String::new();
+        loop {
+          err_line.clear();
+          let size = reader.read_line(&mut err_line).unwrap();
+          rux_dbg_step!(size);
+          if size == 0 {
+            break;
+          } else {
+            rux_dbg_step!(err_line);
+            stocking.put_err(&err_line);
+          }
         }
-      }
-    })
+      })
+      .expect(&format!(
+        "Could not create the thread {}_err",
+        &chained.name
+      ))
   };
   rux_dbg_step!(read_err);
 
   let read_out = {
     let stdout = child.stdout.unwrap();
     let stocking = stocking.clone();
-    thread::spawn(move || {
-      let mut reader = BufReader::new(stdout);
-      let mut out_line = String::new();
-      loop {
-        out_line.clear();
-        let size = reader.read_line(&mut out_line).unwrap();
-        rux_dbg_step!(size);
-        if size == 0 {
-          break;
-        } else {
-          rux_dbg_step!(out_line);
-          stocking.put_out(&out_line);
+    thread::Builder::new()
+      .name(format!("{}_out", &chained.name))
+      .spawn(move || {
+        let mut reader = BufReader::new(stdout);
+        let mut out_line = String::new();
+        loop {
+          out_line.clear();
+          let size = reader.read_line(&mut out_line).unwrap();
+          rux_dbg_step!(size);
+          if size == 0 {
+            break;
+          } else {
+            rux_dbg_step!(out_line);
+            stocking.put_out(&out_line);
+          }
         }
-      }
-    })
+      })
+      .expect(&format!(
+        "Could not create the thread {}_out",
+        &chained.name
+      ))
   };
 
   if let Some(write_in) = write_in {
