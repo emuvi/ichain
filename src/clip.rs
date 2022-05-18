@@ -54,6 +54,23 @@ pub fn parse() -> ArgMatches {
         .help("If has debug symbols, is debugged the functions iterations."),
     )
     .arg(
+      Arg::new("debug-times")
+        .short('m')
+        .long("debug-times")
+        .takes_value(false)
+        .required(false)
+        .help("If has debug symbols, will show the time of each logged."),
+    )
+    .arg(
+      Arg::new("delay")
+        .short('d')
+        .long("delay")
+        .value_name("TIME")
+        .takes_value(true)
+        .required(false)
+        .help("How much time to wait until next attempt get the value to pass."),
+    )
+    .arg(
       Arg::new("input")
         .short('i')
         .long("input")
