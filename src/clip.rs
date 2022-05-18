@@ -4,7 +4,7 @@ pub fn parse() -> ArgMatches {
   Command::new("ichain")
     .version(clap::crate_version!())
     .about("IChain is a command program that chains multiple executions of programs in parallel passing inputs and outputs between then as configured in a ICH file.")
-    .author("Éverton M. Vieira <everton.muvi@gmail.com>")
+    .author("Éverton M. Vieira <emuvi@outlook.com.br>")
     .arg(
       Arg::new("verbose")
         .short('v')
