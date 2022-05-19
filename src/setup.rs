@@ -23,7 +23,7 @@ impl Chained {
             alias = program_body[body_colon + 1..body_asterisk].to_string();
             times = program_body[body_asterisk + 1..]
               .parse()
-              .expect("Could not parse the times.");
+              .expect("Could not parse the times of a program.");
           } else {
             name = program_body[..body_colon].to_string();
             alias = program_body[body_colon + 1..].to_string();
@@ -34,7 +34,7 @@ impl Chained {
             alias = name.clone();
             times = program_body[body_asterisk + 1..]
               .parse()
-              .expect("Could not parse the times.");
+              .expect("Could not parse the times of a program.");
           } else {
             name = program_body.to_string();
             alias = name.clone();
@@ -79,14 +79,20 @@ pub enum PassTo {
 #[derive(Clone, Debug)]
 pub enum PassOn {
   DirectLike(String),
-  ExpectAllOutOf(String),
-  ExpectEachOutOf(String),
-  ExpectForkOutOf(String),
-  ExpectNthOutOf(usize, String),
-  ExpectAllErrOf(String),
-  ExpectEachErrOf(String),
-  ExpectForkErrOf(String),
-  ExpectNthErrOf(usize, String),
+  ExpectAllOutOf(PassFrom),
+  ExpectEachOutOf(PassFrom),
+  ExpectForkOutOf(PassFrom),
+  ExpectNthOutOf(usize, PassFrom),
+  ExpectAllErrOf(PassFrom),
+  ExpectEachErrOf(PassFrom),
+  ExpectForkErrOf(PassFrom),
+  ExpectNthErrOf(usize, PassFrom),
+}
+
+#[derive(Clone, Debug)]
+pub struct PassFrom {
+  pub name: String,
+  pub time: usize,
 }
 
 fn get_ways_on(of_setup_line: &str) -> Vec<PassOn> {
@@ -135,45 +141,74 @@ fn try_push_new_pass_on(of_setup_part: &str, on_results: &mut Vec<PassOn>) {
     return;
   }
   if of_setup_part.starts_with("$") {
-    if let Some(dot) = of_setup_part.find(".") {
-      let name = &of_setup_part[1..dot];
-      let from = of_setup_part.find(":");
-      let (what, from) = if let Some(from) = from {
-        (&of_setup_part[dot + 1..from], &of_setup_part[from + 1..])
+    let body = &of_setup_part[1..];
+    let body_slash = body.find("/");
+    let body_dot = body.find(".");
+    let body_colon = body.find(":");
+    let name_bound = if let Some(ref body_slash) = body_slash {
+      *body_slash
+    } else if let Some(ref body_dot) = body_dot {
+      *body_dot
+    } else if let Some(ref body_colon) = body_colon {
+      *body_colon
+    } else {
+      body.len()
+    };
+    let name = body[..name_bound].to_string();
+    let mut time = 1;
+    if let Some(body_slash) = body_slash {
+      let slash_bound = if let Some(ref body_dot) = body_dot {
+        *body_dot
+      } else if let Some(ref body_colon) = body_colon {
+        *body_colon
       } else {
-        (&of_setup_part[dot + 1..], "out")
+        body.len()
       };
-      if what == "all" {
-        if from == "err" {
-          on_results.push(PassOn::ExpectAllErrOf(String::from(name)));
-        } else {
-          on_results.push(PassOn::ExpectAllOutOf(String::from(name)));
-        }
-      } else if what == "each" {
-        if from == "err" {
-          on_results.push(PassOn::ExpectEachErrOf(String::from(name)));
-        } else {
-          on_results.push(PassOn::ExpectEachOutOf(String::from(name)));
-        }
-      } else if what == "fork" {
-        if from == "err" {
-          on_results.push(PassOn::ExpectForkErrOf(String::from(name)));
-        } else {
-          on_results.push(PassOn::ExpectForkOutOf(String::from(name)));
-        }
+      time = body[body_slash + 1..slash_bound]
+        .parse()
+        .expect("Could not parse the time of a way.");
+    }
+    let mut what = "all";
+    if let Some(body_dot) = body_dot {
+      let dot_bound = if let Some(ref body_colon) = body_colon {
+        *body_colon
       } else {
-        let nth = what
-          .parse::<usize>()
-          .expect("Could not parse Nth argument.");
-        if from == "err" {
-          on_results.push(PassOn::ExpectNthErrOf(nth, String::from(name)));
-        } else {
-          on_results.push(PassOn::ExpectNthOutOf(nth, String::from(name)));
-        }
+        body.len()
+      };
+      what = &body[body_dot + 1..dot_bound];
+    }
+    let mut from = "out";
+    if let Some(body_colon) = body_colon {
+      let colon_bound = body.len();
+      from = &body[body_colon + 1..colon_bound];
+    }
+    if what == "all" {
+      if from == "err" {
+        on_results.push(PassOn::ExpectAllErrOf(PassFrom { name, time }));
+      } else {
+        on_results.push(PassOn::ExpectAllOutOf(PassFrom { name, time }));
+      }
+    } else if what == "each" {
+      if from == "err" {
+        on_results.push(PassOn::ExpectEachErrOf(PassFrom { name, time }));
+      } else {
+        on_results.push(PassOn::ExpectEachOutOf(PassFrom { name, time }));
+      }
+    } else if what == "fork" {
+      if from == "err" {
+        on_results.push(PassOn::ExpectForkErrOf(PassFrom { name, time }));
+      } else {
+        on_results.push(PassOn::ExpectForkOutOf(PassFrom { name, time }));
       }
     } else {
-      let name = &of_setup_part[1..];
-      on_results.push(PassOn::ExpectAllOutOf(String::from(name)));
+      let nth = what
+        .parse::<usize>()
+        .expect("Could not parse Nth argument.");
+      if from == "err" {
+        on_results.push(PassOn::ExpectNthErrOf(nth, PassFrom { name, time }));
+      } else {
+        on_results.push(PassOn::ExpectNthOutOf(nth, PassFrom { name, time }));
+      }
     }
   } else {
     on_results.push(PassOn::DirectLike(String::from(of_setup_part)));
