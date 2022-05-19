@@ -649,7 +649,9 @@ dependencies = [
 
 [[package]]
 name = "rubx"
-version = "0.1.0"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "364a22f5d1ba14a30b01f121e32690c749651a03e6dcaa3e932d3cebb6d0d171"
 dependencies = [
  "chrono",
  "clap",
