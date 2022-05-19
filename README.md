@@ -15,11 +15,11 @@ PChain is a command program that chains multiple executions of programs in paral
 
 ### `program`
 
-Is the name of the program the value(s) will be coming and will be passed to.
+Is the name of the program the value(s) will be coming and also will be passed to.
 
 ### `:alias`
 
-Is the alias for the name of the program the methods will call. Default is program.
+Is the alias for the name of the program the methods will call. Default is `program`.
 
 ### `*times`
 
@@ -44,7 +44,7 @@ Options are:
 - `each`
   > pass line by line the expected output.
 - `fork`
-  > distributes the lines for the parallels.
+  > distributes the lines for the parallels calling.
 - `nth`
   > gets the line of the nth specified number.
 
@@ -66,14 +66,14 @@ Options are:
 >arg1 arg2 "arg with space"
 ```
 
-This ICH setup starts prog1 and pass three arguments arg1, arg2 and "arg with space".
+This ICH setup starts one prog1 and pass three arguments arg1, arg2 and "arg with space".
 
 ```pch
-[prog1]
+[prog1:source]
 >--input file.txt
 
-[prog2]
-|$prog1
+[prog2*4]
+>--transform $source.fork
 ```
 
-This ICH setup starts prog1 and pass two arguments --input and file.txt. In parallel the prog2 will be started and will wait to prog1 to end and will pass all the output of prog1 into the input of prog2.
+This ICH setup starts one prog1 with alias source and pass two arguments --input and file.txt. In parallel four executions of prog2 will be started and they will each one of them ask for the output lines from source. In the fork method, the line that one execution of prog2 gets the others does not.
