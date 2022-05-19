@@ -29,7 +29,7 @@ pub fn start(pchain: Vec<Chained>) {
 
 fn execute(chained: Chained, chaining: Chaining) {
   rux_dbg_call!(chained, chaining);
-  let stocking = chaining.add(&chained.name);
+  let stocking = chaining.add(&chained.alias, 1);
   let mut command = Command::new(&chained.name);
   chained.ways.iter().for_each(|(to, on)| {
     rux_dbg_step!(to, on);

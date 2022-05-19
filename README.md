@@ -46,7 +46,7 @@ Options are:
 - `fork`
   > distributes the lines for the parallels.
 - `nth`
-  > gets the line of the specified number.
+  > gets the line of the nth specified number.
 
 ### `:origin`
 
