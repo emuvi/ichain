@@ -135,26 +135,28 @@ impl Iterator for GetFrom {
           rux_dbg_reav!(None);
         }
       },
-      PassOn::ExpectEachOutOf(name) => match self.from.get_stocking(name) {
-        Some(stocking) => loop {
-          let reader = stocking.data.read().unwrap();
-          if rux_dbg_ifis!(self.got < reader.outs.len()) {
-            let found = rux_dbg_lets!(reader.outs[self.got].clone());
-            rux_dbg_muts!(self.got, self.got + 1);
-            rux_dbg_reav!(Some(found));
-          }
-          if rux_dbg_ifis!(reader.done) {
+      PassOn::ExpectEachOutOf(name) | PassOn::ExpectForkOutOf(name) => {
+        match self.from.get_stocking(name) {
+          Some(stocking) => loop {
+            let reader = stocking.data.read().unwrap();
+            if rux_dbg_ifis!(self.got < reader.outs.len()) {
+              let found = rux_dbg_lets!(reader.outs[self.got].clone());
+              rux_dbg_muts!(self.got, self.got + 1);
+              rux_dbg_reav!(Some(found));
+            }
+            if rux_dbg_ifis!(reader.done) {
+              rux_dbg_muts!(self.done, true);
+              rux_dbg_reav!(None);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+          },
+          None => {
+            eprintln!("Get from chaining with name: {} not found.", name);
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
-        },
-        None => {
-          eprintln!("Get from chaining with name: {} not found.", name);
-          rux_dbg_muts!(self.done, true);
-          rux_dbg_reav!(None);
         }
-      },
+      }
       PassOn::ExpectNthOutOf(nth, name) => match self.from.get_stocking(name) {
         Some(stocking) => loop {
           let reader = stocking.data.read().unwrap();
@@ -190,26 +192,28 @@ impl Iterator for GetFrom {
           rux_dbg_reav!(None);
         }
       },
-      PassOn::ExpectEachErrOf(name) => match self.from.get_stocking(name) {
-        Some(stocking) => loop {
-          let reader = stocking.data.read().unwrap();
-          if rux_dbg_ifis!(self.got < reader.errs.len()) {
-            let found = rux_dbg_lets!(reader.errs[self.got].clone());
-            rux_dbg_muts!(self.got, self.got + 1);
-            rux_dbg_reav!(Some(found));
-          }
-          if rux_dbg_ifis!(reader.done) {
+      PassOn::ExpectEachErrOf(name) | PassOn::ExpectForkErrOf(name) => {
+        match self.from.get_stocking(name) {
+          Some(stocking) => loop {
+            let reader = stocking.data.read().unwrap();
+            if rux_dbg_ifis!(self.got < reader.errs.len()) {
+              let found = rux_dbg_lets!(reader.errs[self.got].clone());
+              rux_dbg_muts!(self.got, self.got + 1);
+              rux_dbg_reav!(Some(found));
+            }
+            if rux_dbg_ifis!(reader.done) {
+              rux_dbg_muts!(self.done, true);
+              rux_dbg_reav!(None);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+          },
+          None => {
+            eprintln!("Get from chaining with name: {} not found.", name);
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
-        },
-        None => {
-          eprintln!("Get from chaining with name: {} not found.", name);
-          rux_dbg_muts!(self.done, true);
-          rux_dbg_reav!(None);
         }
-      },
+      }
       PassOn::ExpectNthErrOf(nth, name) => match self.from.get_stocking(name) {
         Some(stocking) => loop {
           let reader = stocking.data.read().unwrap();
