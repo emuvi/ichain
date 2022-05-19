@@ -2,37 +2,36 @@
 
 PChain is a command program that chains multiple executions of programs in parallel passing inputs and outputs between then as configured in a PCH file.
 
-## ICH Setup Specification
+## PCH Setup Specification
 
-### Basic
-
-```ich
-[name_of_program]
->arguments...
-|inputs...
+```pch
+[program|alias:count]
+>argument1 argument2 $alias.method:origin ...
+>...
+|input line 1
+|input line 2 $alias.method:origin ...
+|...
 ```
-
-### Channeled
-
-```ich
-[program]
->arg1 arg2
-|input1
-|input2
-
-[program_two]
->$program.method:origin
-```
-
-This setup will pass to `program_two` as argument the output from `origin` of `program` using the `method` of passing the value(s).
 
 ### `program`
 
-Is the name from what program the value(s) will be coming.
+Is the name of the program the value(s) will be coming and will be passed to.
 
-### `method`
+### `|alias`
 
-Is the way the value(s) will be passed. If it is not configured the default is `all`.
+Is the alias for the name of the program the methods will call. Default is program.
+
+### `:count`
+
+Is the number of parallel executions of that program will be started. Default is 1.
+
+### `$alias`
+
+Is the name of the alias of the program the value(s) will be coming for this one.
+
+### `.method`
+
+Is the way the value(s) will be passed to this program. Default is `all`.
 
 Options are:
 
@@ -40,12 +39,14 @@ Options are:
   > groups in one line the whole output.
 - `each`
   > pass line by line the expected output.
+- `fork`
+  > distributes the lines for the parallels.
 - `nth`
   > gets the line of the specified number.
 
-### `origin`
+### `:origin`
 
-Is from what source the value(s) will be coming. If it is not configured the default is `out`.
+Is from what source the value(s) will be coming. Default is `out`.
 
 Options are:
 
@@ -56,16 +57,14 @@ Options are:
 
 ## Examples
 
-```ich
+```pch
 [prog1]
 >arg1 arg2 "arg with space"
 ```
 
-This ICH setup starts
+This ICH setup starts prog1 and pass three arguments arg1, arg2 and "arg with space".
 
-prog1 and pass three arguments arg1, arg2 and "arg with space".
-
-```ich
+```pch
 [prog1]
 >--input file.txt
 
