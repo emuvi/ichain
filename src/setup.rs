@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Chained {
   pub name: String,
   pub alias: String,
@@ -70,7 +70,7 @@ impl Chained {
   }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum PassTo {
   Param,
   Input,
@@ -91,7 +91,7 @@ pub enum PassOn {
 
 #[derive(Clone, Debug)]
 pub struct PassFrom {
-  pub name: String,
+  pub alias: String,
   pub time: usize,
 }
 
@@ -154,7 +154,7 @@ fn try_push_new_pass_on(of_setup_part: &str, on_results: &mut Vec<PassOn>) {
     } else {
       body.len()
     };
-    let name = body[..name_bound].to_string();
+    let alias = body[..name_bound].to_string();
     let mut time = 1;
     if let Some(body_slash) = body_slash {
       let slash_bound = if let Some(ref body_dot) = body_dot {
@@ -184,30 +184,30 @@ fn try_push_new_pass_on(of_setup_part: &str, on_results: &mut Vec<PassOn>) {
     }
     if what == "all" {
       if from == "err" {
-        on_results.push(PassOn::ExpectAllErrOf(PassFrom { name, time }));
+        on_results.push(PassOn::ExpectAllErrOf(PassFrom { alias, time }));
       } else {
-        on_results.push(PassOn::ExpectAllOutOf(PassFrom { name, time }));
+        on_results.push(PassOn::ExpectAllOutOf(PassFrom { alias, time }));
       }
     } else if what == "each" {
       if from == "err" {
-        on_results.push(PassOn::ExpectEachErrOf(PassFrom { name, time }));
+        on_results.push(PassOn::ExpectEachErrOf(PassFrom { alias, time }));
       } else {
-        on_results.push(PassOn::ExpectEachOutOf(PassFrom { name, time }));
+        on_results.push(PassOn::ExpectEachOutOf(PassFrom { alias, time }));
       }
     } else if what == "fork" {
       if from == "err" {
-        on_results.push(PassOn::ExpectForkErrOf(PassFrom { name, time }));
+        on_results.push(PassOn::ExpectForkErrOf(PassFrom { alias, time }));
       } else {
-        on_results.push(PassOn::ExpectForkOutOf(PassFrom { name, time }));
+        on_results.push(PassOn::ExpectForkOutOf(PassFrom { alias, time }));
       }
     } else {
       let nth = what
         .parse::<usize>()
         .expect("Could not parse Nth argument.");
       if from == "err" {
-        on_results.push(PassOn::ExpectNthErrOf(nth, PassFrom { name, time }));
+        on_results.push(PassOn::ExpectNthErrOf(nth, PassFrom { alias, time }));
       } else {
-        on_results.push(PassOn::ExpectNthOutOf(nth, PassFrom { name, time }));
+        on_results.push(PassOn::ExpectNthOutOf(nth, PassFrom { alias, time }));
       }
     }
   } else {
