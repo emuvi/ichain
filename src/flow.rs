@@ -24,6 +24,7 @@ pub struct Chaining {
 #[derive(Clone, Debug)]
 pub struct Stocking {
   data: Arc<RwLock<Stock>>,
+  fork: Arc<RwLock<Forked>>,
 }
 
 #[derive(Debug)]
@@ -33,8 +34,12 @@ struct Stock {
   errs: Vec<String>,
   outs: Vec<String>,
   done: bool,
-  forked_err: usize,
-  forked_out: usize,
+}
+
+#[derive(Debug)]
+struct Forked {
+  out: usize,
+  err: usize,
 }
 
 impl Chaining {
@@ -54,9 +59,8 @@ impl Chaining {
         errs: Vec::new(),
         outs: Vec::new(),
         done: false,
-        forked_err: 0,
-        forked_out: 0,
       })),
+      fork: Arc::new(RwLock::new(Forked { out: 0, err: 0 })),
     };
     self.pace.write().unwrap().push(stocking.clone());
     rux_dbg_reav!(stocking)
@@ -90,20 +94,20 @@ impl Chaining {
 impl Stocking {
   pub fn put_err(&self, err: &str) {
     rux_dbg_call!(self, err);
-    let mut writer = rux_dbg_lets!(self.data.write().unwrap());
-    writer.errs.push(err.to_string());
+    let mut data_writer = rux_dbg_lets!(self.data.write().unwrap());
+    data_writer.errs.push(err.to_string());
   }
 
   pub fn put_out(&self, out: &str) {
     rux_dbg_call!(self, out);
-    let mut writer = rux_dbg_lets!(self.data.write().unwrap());
-    writer.outs.push(out.to_string());
+    let mut data_writer = rux_dbg_lets!(self.data.write().unwrap());
+    data_writer.outs.push(out.to_string());
   }
 
   pub fn set_done(&self) {
     rux_dbg_call!(self);
-    let mut writer = rux_dbg_lets!(self.data.write().unwrap());
-    rux_dbg_muts!(writer.done, true);
+    let mut data_writer = rux_dbg_lets!(self.data.write().unwrap());
+    rux_dbg_muts!(data_writer.done, true);
   }
 }
 
@@ -170,13 +174,14 @@ impl Iterator for GetFrom {
       },
       PassOn::ExpectForkOutOf(from) => match self.from.get_stocking(from) {
         Some(stocking) => loop {
-          let mut writer = stocking.data.write().unwrap();
-          if rux_dbg_ifis!(writer.forked_out < writer.outs.len()) {
-            let found = rux_dbg_lets!(writer.outs[writer.forked_out].clone());
-            rux_dbg_muts!(writer.forked_out, writer.forked_out + 1);
+          let mut fork_writer = stocking.fork.write().unwrap();
+          let data_reader = stocking.data.read().unwrap();
+          if rux_dbg_ifis!(fork_writer.out < data_reader.outs.len()) {
+            let found = rux_dbg_lets!(data_reader.outs[fork_writer.out].clone());
+            rux_dbg_muts!(fork_writer.out, fork_writer.out + 1);
             rux_dbg_reav!(Some(found));
           }
-          if rux_dbg_ifis!(writer.done) {
+          if rux_dbg_ifis!(data_reader.done) {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
@@ -260,13 +265,14 @@ impl Iterator for GetFrom {
       },
       PassOn::ExpectForkErrOf(from) => match self.from.get_stocking(from) {
         Some(stocking) => loop {
-          let mut writer = stocking.data.write().unwrap();
-          if rux_dbg_ifis!(writer.forked_err < writer.errs.len()) {
-            let found = rux_dbg_lets!(writer.errs[writer.forked_err].clone());
-            rux_dbg_muts!(writer.forked_err, writer.forked_err + 1);
+          let mut fork_writer = stocking.fork.write().unwrap();
+          let data_reader = stocking.data.read().unwrap();
+          if rux_dbg_ifis!(fork_writer.err < data_reader.errs.len()) {
+            let found = rux_dbg_lets!(data_reader.errs[fork_writer.err].clone());
+            rux_dbg_muts!(fork_writer.err, fork_writer.err + 1);
             rux_dbg_reav!(Some(found));
           }
-          if rux_dbg_ifis!(writer.done) {
+          if rux_dbg_ifis!(data_reader.done) {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
