@@ -5,7 +5,7 @@ PChain is a command program that chains multiple executions of programs in paral
 ## PCH Setup Specification
 
 ```pch
-[program|alias:count]
+[program:alias*times]
 >argument1 argument2 $alias.method:origin ...
 >...
 |input line 1
@@ -21,7 +21,7 @@ Is the name of the program the value(s) will be coming and will be passed to.
 
 Is the alias for the name of the program the methods will call. Default is program.
 
-### `:count`
+### `:times`
 
 Is the number of parallel executions of that program will be started. Default is 1.
 
