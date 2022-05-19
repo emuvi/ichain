@@ -1,5 +1,0 @@
-[reargs]
->"argument passed to reecho"
-
-[longwrite]
->-a -t 10 -l $reargs -o test.txt
