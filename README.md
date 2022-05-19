@@ -17,11 +17,11 @@ PChain is a command program that chains multiple executions of programs in paral
 
 Is the name of the program the value(s) will be coming and will be passed to.
 
-### `|alias`
+### `:alias`
 
 Is the alias for the name of the program the methods will call. Default is program.
 
-### `:times`
+### `*times`
 
 Is the number of parallel executions of that program will be started. Default is 1.
 
