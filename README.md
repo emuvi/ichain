@@ -76,4 +76,4 @@ This ICH setup starts one prog1 and pass three arguments arg1, arg2 and "arg wit
 >--transform $source.fork
 ```
 
-This ICH setup starts one prog1 with alias source and pass two arguments --input and file.txt. In parallel four executions of prog2 will be started and they will each one of them ask for the output lines from source. In the fork method, the line that one execution of prog2 gets the others does not. In the other methods, they all gets what they ask for.
+This ICH setup starts one prog1 with alias source and pass two arguments --input and file.txt. In parallel four executions of prog2 will be started. They will, each one of them, receive the first argument --transform and ask for each of the output lines from source. In the fork method, the line that one execution of prog2 gets the others does not. In the other methods, they all gets what they ask for.
