@@ -33,6 +33,8 @@ struct Stock {
   errs: Vec<String>,
   outs: Vec<String>,
   done: bool,
+  forked_err: usize,
+  forked_out: usize,
 }
 
 impl Chaining {
@@ -52,6 +54,8 @@ impl Chaining {
         errs: Vec::new(),
         outs: Vec::new(),
         done: false,
+        forked_err: 0,
+        forked_out: 0,
       })),
     };
     self.pace.write().unwrap().push(stocking.clone());
@@ -141,31 +145,52 @@ impl Iterator for GetFrom {
           rux_dbg_reav!(None);
         }
       },
-      PassOn::ExpectEachOutOf(from) | PassOn::ExpectForkOutOf(from) => {
-        match self.from.get_stocking(from) {
-          Some(stocking) => loop {
-            let reader = stocking.data.read().unwrap();
-            if rux_dbg_ifis!(self.got < reader.outs.len()) {
-              let found = rux_dbg_lets!(reader.outs[self.got].clone());
-              rux_dbg_muts!(self.got, self.got + 1);
-              rux_dbg_reav!(Some(found));
-            }
-            if rux_dbg_ifis!(reader.done) {
-              rux_dbg_muts!(self.done, true);
-              rux_dbg_reav!(None);
-            }
-            std::thread::sleep(std::time::Duration::from_millis(get_delay()));
-          },
-          None => {
-            eprintln!(
-              "Could not get the chaining of name {} and time {}.",
-              from.name, from.time
-            );
+      PassOn::ExpectEachOutOf(from) => match self.from.get_stocking(from) {
+        Some(stocking) => loop {
+          let reader = stocking.data.read().unwrap();
+          if rux_dbg_ifis!(self.got < reader.outs.len()) {
+            let found = rux_dbg_lets!(reader.outs[self.got].clone());
+            rux_dbg_muts!(self.got, self.got + 1);
+            rux_dbg_reav!(Some(found));
+          }
+          if rux_dbg_ifis!(reader.done) {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
+          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+        },
+        None => {
+          eprintln!(
+            "Could not get the chaining of name {} and time {}.",
+            from.name, from.time
+          );
+          rux_dbg_muts!(self.done, true);
+          rux_dbg_reav!(None);
         }
-      }
+      },
+      PassOn::ExpectForkOutOf(from) => match self.from.get_stocking(from) {
+        Some(stocking) => loop {
+          let mut writer = stocking.data.write().unwrap();
+          if rux_dbg_ifis!(writer.forked_out < writer.outs.len()) {
+            let found = rux_dbg_lets!(writer.outs[writer.forked_out].clone());
+            rux_dbg_muts!(writer.forked_out, writer.forked_out + 1);
+            rux_dbg_reav!(Some(found));
+          }
+          if rux_dbg_ifis!(writer.done) {
+            rux_dbg_muts!(self.done, true);
+            rux_dbg_reav!(None);
+          }
+          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+        },
+        None => {
+          eprintln!(
+            "Could not get the chaining of name {} and time {}.",
+            from.name, from.time
+          );
+          rux_dbg_muts!(self.done, true);
+          rux_dbg_reav!(None);
+        }
+      },
       PassOn::ExpectNthOutOf(nth, from) => match self.from.get_stocking(from) {
         Some(stocking) => loop {
           let reader = stocking.data.read().unwrap();
@@ -210,31 +235,52 @@ impl Iterator for GetFrom {
           rux_dbg_reav!(None);
         }
       },
-      PassOn::ExpectEachErrOf(from) | PassOn::ExpectForkErrOf(from) => {
-        match self.from.get_stocking(from) {
-          Some(stocking) => loop {
-            let reader = stocking.data.read().unwrap();
-            if rux_dbg_ifis!(self.got < reader.errs.len()) {
-              let found = rux_dbg_lets!(reader.errs[self.got].clone());
-              rux_dbg_muts!(self.got, self.got + 1);
-              rux_dbg_reav!(Some(found));
-            }
-            if rux_dbg_ifis!(reader.done) {
-              rux_dbg_muts!(self.done, true);
-              rux_dbg_reav!(None);
-            }
-            std::thread::sleep(std::time::Duration::from_millis(get_delay()));
-          },
-          None => {
-            eprintln!(
-              "Could not get the chaining of name {} and time {}.",
-              from.name, from.time
-            );
+      PassOn::ExpectEachErrOf(from) => match self.from.get_stocking(from) {
+        Some(stocking) => loop {
+          let reader = stocking.data.read().unwrap();
+          if rux_dbg_ifis!(self.got < reader.errs.len()) {
+            let found = rux_dbg_lets!(reader.errs[self.got].clone());
+            rux_dbg_muts!(self.got, self.got + 1);
+            rux_dbg_reav!(Some(found));
+          }
+          if rux_dbg_ifis!(reader.done) {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
+          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+        },
+        None => {
+          eprintln!(
+            "Could not get the chaining of name {} and time {}.",
+            from.name, from.time
+          );
+          rux_dbg_muts!(self.done, true);
+          rux_dbg_reav!(None);
         }
-      }
+      },
+      PassOn::ExpectForkErrOf(from) => match self.from.get_stocking(from) {
+        Some(stocking) => loop {
+          let mut writer = stocking.data.write().unwrap();
+          if rux_dbg_ifis!(writer.forked_err < writer.errs.len()) {
+            let found = rux_dbg_lets!(writer.errs[writer.forked_err].clone());
+            rux_dbg_muts!(writer.forked_err, writer.forked_err + 1);
+            rux_dbg_reav!(Some(found));
+          }
+          if rux_dbg_ifis!(writer.done) {
+            rux_dbg_muts!(self.done, true);
+            rux_dbg_reav!(None);
+          }
+          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+        },
+        None => {
+          eprintln!(
+            "Could not get the chaining of name {} and time {}.",
+            from.name, from.time
+          );
+          rux_dbg_muts!(self.done, true);
+          rux_dbg_reav!(None);
+        }
+      },
       PassOn::ExpectNthErrOf(nth, from) => match self.from.get_stocking(from) {
         Some(stocking) => loop {
           let reader = stocking.data.read().unwrap();
