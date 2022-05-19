@@ -28,7 +28,7 @@ pub struct Stocking {
 
 #[derive(Debug)]
 struct Stock {
-  name: String,
+  alias: String,
   time: usize,
   errs: Vec<String>,
   outs: Vec<String>,
@@ -45,11 +45,11 @@ impl Chaining {
     })
   }
 
-  pub fn add(&self, name: &str, time: usize) -> Stocking {
-    rux_dbg_call!(self, name);
+  pub fn add(&self, alias: String, time: usize) -> Stocking {
+    rux_dbg_call!(self, alias);
     let stocking = Stocking {
       data: Arc::new(RwLock::new(Stock {
-        name: name.to_string(),
+        alias,
         time,
         errs: Vec::new(),
         outs: Vec::new(),
@@ -71,7 +71,7 @@ impl Chaining {
       .iter()
       .find(|stocking| {
         let stock = stocking.data.read().unwrap();
-        stock.name == from.name && stock.time == from.time
+        stock.alias == from.alias && stock.time == from.time
       })
       .cloned())
   }
@@ -138,8 +138,8 @@ impl Iterator for GetFrom {
         },
         None => {
           eprintln!(
-            "Could not get the chaining of name {} and time {}.",
-            from.name, from.time
+            "Could not get the chaining of alias {} and time {}.",
+            from.alias, from.time
           );
           rux_dbg_muts!(self.done, true);
           rux_dbg_reav!(None);
@@ -161,8 +161,8 @@ impl Iterator for GetFrom {
         },
         None => {
           eprintln!(
-            "Could not get the chaining of name {} and time {}.",
-            from.name, from.time
+            "Could not get the chaining of alias {} and time {}.",
+            from.alias, from.time
           );
           rux_dbg_muts!(self.done, true);
           rux_dbg_reav!(None);
@@ -184,8 +184,8 @@ impl Iterator for GetFrom {
         },
         None => {
           eprintln!(
-            "Could not get the chaining of name {} and time {}.",
-            from.name, from.time
+            "Could not get the chaining of alias {} and time {}.",
+            from.alias, from.time
           );
           rux_dbg_muts!(self.done, true);
           rux_dbg_reav!(None);
@@ -201,7 +201,7 @@ impl Iterator for GetFrom {
           if rux_dbg_ifis!(reader.done) {
             eprintln!(
               "Nth {} Out of {} and time {} will never come.",
-              nth, from.name, from.time
+              nth, from.alias, from.time
             );
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
@@ -210,8 +210,8 @@ impl Iterator for GetFrom {
         },
         None => {
           eprintln!(
-            "Could not get the chaining of name {} and time {}.",
-            from.name, from.time
+            "Could not get the chaining of alias {} and time {}.",
+            from.alias, from.time
           );
           rux_dbg_muts!(self.done, true);
           rux_dbg_reav!(None);
@@ -228,8 +228,8 @@ impl Iterator for GetFrom {
         },
         None => {
           eprintln!(
-            "Could not get the chaining of name {} and time {}.",
-            from.name, from.time
+            "Could not get the chaining of alias {} and time {}.",
+            from.alias, from.time
           );
           rux_dbg_muts!(self.done, true);
           rux_dbg_reav!(None);
@@ -251,8 +251,8 @@ impl Iterator for GetFrom {
         },
         None => {
           eprintln!(
-            "Could not get the chaining of name {} and time {}.",
-            from.name, from.time
+            "Could not get the chaining of alias {} and time {}.",
+            from.alias, from.time
           );
           rux_dbg_muts!(self.done, true);
           rux_dbg_reav!(None);
@@ -274,8 +274,8 @@ impl Iterator for GetFrom {
         },
         None => {
           eprintln!(
-            "Could not get the chaining of name {} and time {}.",
-            from.name, from.time
+            "Could not get the chaining of alias {} and time {}.",
+            from.alias, from.time
           );
           rux_dbg_muts!(self.done, true);
           rux_dbg_reav!(None);
@@ -291,7 +291,7 @@ impl Iterator for GetFrom {
           if rux_dbg_ifis!(reader.done) {
             eprintln!(
               "Nth {} Err of {} and time {} will never come.",
-              nth, from.name, from.time
+              nth, from.alias, from.time
             );
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
@@ -300,8 +300,8 @@ impl Iterator for GetFrom {
         },
         None => {
           eprintln!(
-            "Could not get the chaining of name {} and time {}.",
-            from.name, from.time
+            "Could not get the chaining of alias {} and time {}.",
+            from.alias, from.time
           );
           rux_dbg_muts!(self.done, true);
           rux_dbg_reav!(None);
