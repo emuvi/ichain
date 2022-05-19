@@ -1,16 +1,45 @@
 #[derive(Debug)]
 pub struct Chained {
   pub name: String,
+  pub alias: String,
+  pub times: usize,
   pub ways: Vec<(PassTo, PassOn)>,
 }
 
 impl Chained {
   pub fn new(block: &Vec<&str>) -> Self {
     let mut name = String::new();
+    let mut alias = String::new();
+    let mut times = 1;
     let mut ways = Vec::new();
     block.iter().for_each(|line| {
       if line.starts_with("[") {
-        name.push_str(line.trim_start_matches("[").trim_end_matches("]"));
+        let program_body = line.trim_start_matches("[").trim_end_matches("]");
+        let body_colon = program_body.find(":");
+        let body_asterisk = program_body.rfind("*");
+        if let Some(body_colon) = body_colon {
+          if let Some(body_asterisk) = body_asterisk {
+            name = program_body[..body_colon].to_string();
+            alias = program_body[body_colon + 1..body_asterisk].to_string();
+            times = program_body[body_asterisk + 1..]
+              .parse()
+              .expect("Could not parse the times of a program.");
+          } else {
+            name = program_body[..body_colon].to_string();
+            alias = program_body[body_colon + 1..].to_string();
+          }
+        } else {
+          if let Some(body_asterisk) = body_asterisk {
+            name = program_body[..body_asterisk].to_string();
+            alias = name.clone();
+            times = program_body[body_asterisk + 1..]
+              .parse()
+              .expect("Could not parse the times of a program.");
+          } else {
+            name = program_body.to_string();
+            alias = name.clone();
+          }
+        }
       } else if line.starts_with(">") {
         let line = &line[1..].trim();
         for on in get_ways_on(line) {
@@ -23,7 +52,12 @@ impl Chained {
         }
       }
     });
-    Chained { name, ways }
+    Chained {
+      name,
+      alias,
+      times,
+      ways,
+    }
   }
 
   pub fn has_inputs(&self) -> bool {
