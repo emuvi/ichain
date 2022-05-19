@@ -6,10 +6,10 @@ PChain is a command program that chains multiple executions of programs in paral
 
 ```pch
 [program:alias*times]
->argument1 argument2 $alias.method:origin ...
+>argument1 argument2 $alias/time.method:origin ...
 >...
 |input line 1
-|input line 2 $alias.method:origin ...
+|input line 2 $alias/time.method:origin ...
 |...
 ```
 
@@ -28,6 +28,10 @@ Is the number of parallel executions of that program will be started. Default is
 ### `$alias`
 
 Is the name of the alias of the program the value(s) will be coming for this one.
+
+### `/time`
+
+Is the index from which time the parallel program was started. Default is 1;
 
 ### `.method`
 
