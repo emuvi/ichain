@@ -39,10 +39,10 @@ fn main() {
   let input = args
     .value_of("input")
     .expect("You have to pass an input argument.");
-  rux_dbg_info!("IChain starting", input);
+  rux_dbg_info!("PChain starting", input);
   let contents =
     std::fs::read_to_string(input).expect("Something went wrong reading the input file.");
-  let mut ichain: Vec<Chained> = Vec::new();
+  let mut pchain: Vec<Chained> = Vec::new();
   let mut block: Vec<&str> = Vec::new();
   rux_dbg_step!(contents);
   contents.lines().for_each(|line| {
@@ -50,7 +50,7 @@ fn main() {
     if !line.is_empty() {
       if line.starts_with("[") {
         if !block.is_empty() {
-          ichain.push(Chained::new(&block));
+          pchain.push(Chained::new(&block));
           block.clear();
         }
       }
@@ -58,8 +58,8 @@ fn main() {
     }
   });
   if !block.is_empty() {
-    ichain.push(Chained::new(&block));
+    pchain.push(Chained::new(&block));
     block.clear();
   }
-  runner::start(ichain);
+  runner::start(pchain);
 }

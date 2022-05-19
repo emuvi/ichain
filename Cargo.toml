@@ -1,7 +1,7 @@
 [package]
-name = "ichain"
-description = "IChain is a command program that chains muliple executions of programs passing inputs and outputs as configured in a INI like file."
-repository = "https://github.com/emuvi/ichain/"
+name = "pchain"
+description = "PChain is a command program that chains multiple executions of programs in parallel passing inputs and outputs between then as configured in a PCH file."
+repository = "https://github.com/emuvi/pchain/"
 authors = ["Éverton M. Vieira"]
 license = "LGPL-3.0-only"
 version = "0.1.0"

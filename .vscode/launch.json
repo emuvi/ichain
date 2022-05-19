@@ -7,11 +7,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'ichain'",
+      "name": "Debug executable 'pchain'",
       "cargo": {
-        "args": ["build", "--bin=ichain", "--package=ichain"],
+        "args": ["build", "--bin=pchain", "--package=pchain"],
         "filter": {
-          "name": "ichain",
+          "name": "pchain",
           "kind": "bin"
         }
       },
@@ -21,11 +21,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in executable 'ichain'",
+      "name": "Debug unit tests in executable 'pchain'",
       "cargo": {
-        "args": ["test", "--no-run", "--bin=ichain", "--package=ichain"],
+        "args": ["test", "--no-run", "--bin=pchain", "--package=pchain"],
         "filter": {
-          "name": "ichain",
+          "name": "pchain",
           "kind": "bin"
         }
       },

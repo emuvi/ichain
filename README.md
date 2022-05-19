@@ -1,6 +1,6 @@
-# IChain
+# PChain
 
-IChain is a command program that chains multiple executions of programs in parallel passing inputs and outputs between then as configured in a ICH file.
+PChain is a command program that chains multiple executions of programs in parallel passing inputs and outputs between then as configured in a PCH file.
 
 ## ICH Setup Specification
 
