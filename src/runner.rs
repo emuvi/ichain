@@ -62,7 +62,7 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
     let chained_clone = chained_arc.clone();
     Some(
       thread::Builder::new()
-        .name(format!("{}_{}_in", chained_arc.name, time))
+        .name(format!("{}_{}_in", chained_arc.alias, time))
         .spawn(move || {
           for (to, on) in &chained_clone.ways {
             rux_dbg_step!(to, on);
@@ -89,7 +89,7 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
     let stderr = child.stderr.unwrap();
     let stocking_clone = stocking.clone();
     thread::Builder::new()
-      .name(format!("{}_{}_err", chained_arc.name, time))
+      .name(format!("{}_{}_err", chained_arc.alias, time))
       .spawn(move || {
         let mut reader = BufReader::new(stderr);
         let mut err_line = String::new();
@@ -116,7 +116,7 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
     let stdout = child.stdout.unwrap();
     let stocking_clone = stocking.clone();
     thread::Builder::new()
-      .name(format!("{}_{}_out", chained_arc.name, time))
+      .name(format!("{}_{}_out", chained_arc.alias, time))
       .spawn(move || {
         let mut reader = BufReader::new(stdout);
         let mut out_line = String::new();
