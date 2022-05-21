@@ -9,15 +9,20 @@ use crate::setup::PassOn;
 static DELAY: AtomicU64 = AtomicU64::new(10);
 
 pub fn get_delay() -> u64 {
-  DELAY.load(Ordering::Acquire)
+  rux_dbg_call!();
+  rux_dbg_reav!(DELAY.load(Ordering::Acquire));
 }
 
 pub fn set_delay(millis: u64) {
-  DELAY.store(millis, Ordering::Release)
+  rux_dbg_call!(millis);
+  rux_dbg_reav!(DELAY.store(millis, Ordering::Release));
 }
 
 pub fn sleep_delay() {
-  std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+  rux_dbg_call!();
+  rux_dbg_reav!(std::thread::sleep(std::time::Duration::from_millis(
+    get_delay()
+  )));
 }
 
 #[derive(Clone, Debug)]
@@ -100,18 +105,21 @@ impl Stocking {
     rux_dbg_call!(self, err);
     let mut data_writer = rux_dbg_lets!(self.data.write().unwrap());
     data_writer.errs.push(err.to_string());
+    rux_dbg_reav!(());
   }
 
   pub fn put_out(&self, out: &str) {
     rux_dbg_call!(self, out);
     let mut data_writer = rux_dbg_lets!(self.data.write().unwrap());
     data_writer.outs.push(out.to_string());
+    rux_dbg_reav!(());
   }
 
   pub fn set_done(&self) {
     rux_dbg_call!(self);
     let mut data_writer = rux_dbg_lets!(self.data.write().unwrap());
     rux_dbg_muts!(data_writer.done, true);
+    rux_dbg_reav!(());
   }
 }
 

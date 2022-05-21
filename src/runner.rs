@@ -1,9 +1,10 @@
+use rubx::{rux_dbg_call, rux_dbg_lets, rux_dbg_step};
+use thread_priority::{ThreadBuilder, ThreadPriority};
+
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::process::{Command, Stdio};
 use std::sync::Arc;
-use std::thread::{self, JoinHandle};
-
-use rubx::{rux_dbg_call, rux_dbg_lets, rux_dbg_step};
+use std::thread::JoinHandle;
 
 use crate::flow::Chaining;
 use crate::setup::Chained;
@@ -19,9 +20,13 @@ pub fn start(pchain: Vec<Chained>) {
       let chained_cloned = chained_arc.clone();
       let chaining_cloned = chaining.clone();
       handles.push(
-        thread::Builder::new()
+        ThreadBuilder::default()
           .name(format!("{}_{}", chained_cloned.alias, time))
-          .spawn(move || execute(chained_cloned, time, chaining_cloned))
+          .priority(ThreadPriority::Max)
+          .spawn(move |result| {
+            rux_dbg_call!(result);
+            execute(chained_cloned, time, chaining_cloned)
+          })
           .expect("Could not create the thread for the chained."),
       );
     }
@@ -61,9 +66,11 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
     let mut writer = BufWriter::new(stdin);
     let chained_clone = chained_arc.clone();
     Some(
-      thread::Builder::new()
+      ThreadBuilder::default()
         .name(format!("{}_{}_in", chained_arc.alias, time))
-        .spawn(move || {
+        .priority(ThreadPriority::Min)
+        .spawn(move |result| {
+          rux_dbg_call!(result);
           for (to, on) in &chained_clone.ways {
             rux_dbg_step!(to, on);
             if to == &PassTo::Input {
@@ -88,9 +95,12 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
   let read_err = {
     let stderr = child.stderr.unwrap();
     let stocking_clone = stocking.clone();
-    thread::Builder::new()
+
+    ThreadBuilder::default()
       .name(format!("{}_{}_err", chained_arc.alias, time))
-      .spawn(move || {
+      .priority(ThreadPriority::Min)
+      .spawn(move |result| {
+        rux_dbg_call!(result);
         let mut reader = BufReader::new(stderr);
         let mut err_line = String::new();
         loop {
@@ -115,9 +125,12 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
   let read_out = {
     let stdout = child.stdout.unwrap();
     let stocking_clone = stocking.clone();
-    thread::Builder::new()
+
+    ThreadBuilder::default()
       .name(format!("{}_{}_out", chained_arc.alias, time))
-      .spawn(move || {
+      .priority(ThreadPriority::Max)
+      .spawn(move |result| {
+        rux_dbg_call!(result);
         let mut reader = BufReader::new(stdout);
         let mut out_line = String::new();
         loop {
