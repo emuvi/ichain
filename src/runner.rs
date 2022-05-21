@@ -77,7 +77,7 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
         })
         .expect(&format!(
           "Could not create the thread {}_{}_in",
-          chained_arc.name, time
+          chained_arc.alias, time
         )),
     )
   } else {
@@ -107,7 +107,7 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
       })
       .expect(&format!(
         "Could not create the thread {}_{}_err",
-        chained_arc.name, time
+        chained_arc.alias, time
       ))
   };
   rux_dbg_step!(read_err);
@@ -134,7 +134,7 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
       })
       .expect(&format!(
         "Could not create the thread {}_{}_out",
-        chained_arc.name, time
+        chained_arc.alias, time
       ))
   };
 
