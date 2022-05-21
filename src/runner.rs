@@ -1,4 +1,4 @@
-use rubx::{rux_dbg_call, rux_dbg_lets, rux_dbg_step};
+use rubx::{rux_dbg_call, rux_dbg_lets, rux_dbg_reav, rux_dbg_step};
 use thread_priority::{ThreadBuilder, ThreadPriority};
 
 use std::io::{BufRead, BufReader, BufWriter, Write};
@@ -33,8 +33,10 @@ pub fn start(pchain: Vec<Chained>) {
   }
   rux_dbg_step!(handles);
   for handle in handles {
+    rux_dbg_step!(handle);
     handle.join().unwrap();
   }
+  rux_dbg_reav!(());
 }
 
 fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
@@ -81,6 +83,7 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
               }
             }
           }
+          rux_dbg_reav!(());
         })
         .expect(&format!(
           "Could not create the thread {}_{}_in",
@@ -114,6 +117,7 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
             stocking_clone.put_err(&err_line);
           }
         }
+        rux_dbg_reav!(());
       })
       .expect(&format!(
         "Could not create the thread {}_{}_err",
@@ -144,6 +148,7 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
             stocking_clone.put_out(&out_line);
           }
         }
+        rux_dbg_reav!(());
       })
       .expect(&format!(
         "Could not create the thread {}_{}_out",
@@ -151,10 +156,15 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
       ))
   };
 
+  rux_dbg_step!(write_in);
   if let Some(write_in) = write_in {
     write_in.join().unwrap();
   }
+  rux_dbg_step!(write_in);
   read_err.join().unwrap();
+  rux_dbg_step!(read_err);
   read_out.join().unwrap();
+  rux_dbg_step!(read_out);
   stocking.set_done();
+  rux_dbg_reav!(());
 }
