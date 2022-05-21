@@ -6,7 +6,7 @@ use std::sync::{Arc, RwLock};
 use crate::setup::PassFrom;
 use crate::setup::PassOn;
 
-static DELAY: AtomicU64 = AtomicU64::new(3);
+static DELAY: AtomicU64 = AtomicU64::new(10);
 
 pub fn get_delay() -> u64 {
   DELAY.load(Ordering::Acquire)
@@ -14,6 +14,10 @@ pub fn get_delay() -> u64 {
 
 pub fn set_delay(millis: u64) {
   DELAY.store(millis, Ordering::Release)
+}
+
+pub fn sleep_delay() {
+  std::thread::sleep(std::time::Duration::from_millis(get_delay()));
 }
 
 #[derive(Clone, Debug)]
@@ -138,7 +142,7 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(Some(reader.outs.join(" ")));
           }
-          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+          sleep_delay();
         },
         None => {
           eprintln!(
@@ -161,7 +165,7 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+          sleep_delay();
         },
         None => {
           eprintln!(
@@ -185,7 +189,7 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+          sleep_delay();
         },
         None => {
           eprintln!(
@@ -211,7 +215,7 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+          sleep_delay();
         },
         None => {
           eprintln!(
@@ -229,7 +233,7 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(Some(reader.errs.join(" ")));
           }
-          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+          sleep_delay();
         },
         None => {
           eprintln!(
@@ -252,7 +256,7 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+          sleep_delay();
         },
         None => {
           eprintln!(
@@ -276,7 +280,7 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+          sleep_delay();
         },
         None => {
           eprintln!(
@@ -302,7 +306,7 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          std::thread::sleep(std::time::Duration::from_millis(get_delay()));
+          sleep_delay();
         },
         None => {
           eprintln!(
