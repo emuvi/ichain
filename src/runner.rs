@@ -156,15 +156,11 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
       ))
   };
 
-  rux_dbg_step!(write_in);
   if let Some(write_in) = write_in {
     write_in.join().unwrap();
   }
-  rux_dbg_step!(write_in);
   read_err.join().unwrap();
-  rux_dbg_step!(read_err);
   read_out.join().unwrap();
-  rux_dbg_step!(read_out);
   stocking.set_done();
   rux_dbg_reav!(());
 }
