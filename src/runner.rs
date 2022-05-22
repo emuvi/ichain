@@ -1,40 +1,39 @@
+use rubx::RubxError;
 use rubx::{rux_dbg_call, rux_dbg_lets, rux_dbg_reav, rux_dbg_step};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
+use tokio::process::{ChildStderr, ChildStdin, ChildStdout, Command};
 
-use std::io::{BufRead, BufReader, BufWriter, Write};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::Arc;
-use std::thread::JoinHandle;
 
 use crate::flow::Chaining;
+use crate::flow::Stocking;
 use crate::setup::Chained;
 use crate::setup::PassTo;
 
-pub fn start(pchain: Vec<Chained>) {
+pub async fn start(pchain: Vec<Chained>) -> Result<(), RubxError> {
   rux_dbg_call!(pchain);
   let chaining = rux_dbg_lets!(Chaining::new());
-  let mut handles: Vec<JoinHandle<()>> = Vec::new();
+  let mut handles = Vec::new();
   for chained in pchain {
     let chained_arc = Arc::new(chained);
     for time in 1..=chained_arc.times {
       let chained_cloned = chained_arc.clone();
       let chaining_cloned = chaining.clone();
-      handles.push(
-        std::thread::Builder::new()
-          .name(format!("{}_{}", chained_cloned.alias, time))
-          .spawn(move || execute(chained_cloned, time, chaining_cloned))
-          .expect("Could not create the thread for the chained."),
-      );
+      handles.push(tokio::spawn(execute(chained_cloned, time, chaining_cloned)));
     }
   }
-  rux_dbg_step!(handles);
   for handle in handles {
-    rux_dbg_step!(handle);
-    handle.join().unwrap();
+    handle.await??;
   }
-  rux_dbg_reav!(());
+  rux_dbg_reav!(Ok(()));
 }
 
-fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
+async fn execute(
+  chained_arc: Arc<Chained>,
+  time: usize,
+  chaining: Chaining,
+) -> Result<(), RubxError> {
   rux_dbg_call!(chained_arc, chaining);
   let stocking = chaining.add(chained_arc.alias.clone(), time);
   let mut command = Command::new(&chained_arc.name);
@@ -47,7 +46,7 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
       }
     }
   });
-  let child = command
+  let mut child = command
     .stdin(if chained_arc.has_inputs() {
       Stdio::piped()
     } else {
@@ -55,99 +54,70 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
     })
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
-    .spawn()
-    .unwrap();
+    .spawn()?;
 
   let write_in = if chained_arc.has_inputs() {
-    let stdin = child.stdin.unwrap();
-    let mut writer = BufWriter::new(stdin);
+    let stdin = child.stdin.take().unwrap();
     let chained_clone = chained_arc.clone();
-    Some(
-      std::thread::Builder::new()
-        .name(format!("{}_{}_in", chained_arc.alias, time))
-        .spawn(move || {
-          for (to, on) in &chained_clone.ways {
-            rux_dbg_step!(to, on);
-            if to == &PassTo::Input {
-              rux_dbg_step!(to);
-              for passed in chaining.get_from(on.clone()) {
-                rux_dbg_step!(passed);
-                writer.write(passed.as_bytes()).unwrap();
-              }
-            }
-          }
-          rux_dbg_reav!(());
-        })
-        .expect(&format!(
-          "Could not create the thread {}_{}_in",
-          chained_arc.alias, time
-        )),
-    )
+    let chaining_clone = chaining.clone();
+    Some(tokio::spawn(write_in(stdin, chained_clone, chaining_clone)))
   } else {
     None
   };
   rux_dbg_step!(write_in);
 
   let read_out = {
-    let stdout = child.stdout.unwrap();
+    let stdout = child.stdout.take().unwrap();
     let stocking_clone = stocking.clone();
-    std::thread::Builder::new()
-      .name(format!("{}_{}_out", chained_arc.alias, time))
-      .spawn(move || {
-        let mut reader = BufReader::new(stdout);
-        let mut out_line = String::new();
-        loop {
-          out_line.clear();
-          let size = reader.read_line(&mut out_line).unwrap();
-          rux_dbg_step!(size);
-          if size == 0 {
-            break;
-          } else {
-            rux_dbg_step!(out_line);
-            stocking_clone.put_out(&out_line);
-          }
-        }
-        rux_dbg_reav!(());
-      })
-      .expect(&format!(
-        "Could not create the thread {}_{}_out",
-        chained_arc.alias, time
-      ))
+    tokio::spawn(read_out(stdout, stocking_clone))
   };
+  rux_dbg_step!(read_out);
 
   let read_err = {
-    let stderr = child.stderr.unwrap();
+    let stderr = child.stderr.take().unwrap();
     let stocking_clone = stocking.clone();
-    std::thread::Builder::new()
-      .name(format!("{}_{}_err", chained_arc.alias, time))
-      .spawn(move || {
-        let mut reader = BufReader::new(stderr);
-        let mut err_line = String::new();
-        loop {
-          err_line.clear();
-          let size = reader.read_line(&mut err_line).unwrap();
-          rux_dbg_step!(size);
-          if size == 0 {
-            break;
-          } else {
-            rux_dbg_step!(err_line);
-            stocking_clone.put_err(&err_line);
-          }
-        }
-        rux_dbg_reav!(());
-      })
-      .expect(&format!(
-        "Could not create the thread {}_{}_err",
-        chained_arc.alias, time
-      ))
+    tokio::spawn(read_err(stderr, stocking_clone))
   };
   rux_dbg_step!(read_err);
 
-  if let Some(write_in) = write_in {
-    write_in.join().unwrap();
-  }
-  read_out.join().unwrap();
-  read_err.join().unwrap();
+  child.wait().await?;
   stocking.set_done();
-  rux_dbg_reav!(());
+  rux_dbg_reav!(Ok(()));
+}
+
+async fn write_in(
+  stdin: ChildStdin,
+  chained_clone: Arc<Chained>,
+  chaining_clone: Chaining,
+) -> Result<(), RubxError> {
+  let mut writer = BufWriter::new(stdin);
+  for (to, on) in &chained_clone.ways {
+    rux_dbg_step!(to, on);
+    if to == &PassTo::Input {
+      rux_dbg_step!(to);
+      for passed in chaining_clone.get_from(on.clone()) {
+        rux_dbg_step!(passed);
+        writer.write(passed.as_bytes()).await?;
+      }
+    }
+  }
+  rux_dbg_reav!(Ok(()));
+}
+
+async fn read_out(stdout: ChildStdout, stocking_clone: Stocking) -> Result<(), RubxError> {
+  let mut reader = BufReader::new(stdout).lines();
+  while let Some(line) = reader.next_line().await? {
+    rux_dbg_step!(line);
+    stocking_clone.put_out(&line);
+  }
+  rux_dbg_reav!(Ok(()));
+}
+
+async fn read_err(stderr: ChildStderr, stocking_clone: Stocking) -> Result<(), RubxError> {
+  let mut reader = BufReader::new(stderr).lines();
+  while let Some(line) = reader.next_line().await? {
+    rux_dbg_step!(line);
+    stocking_clone.put_err(&line);
+  }
+  rux_dbg_reav!(Ok(()));
 }

@@ -3,10 +3,12 @@ mod flow;
 mod runner;
 mod setup;
 
+use rubx::RubxError;
 use rubx::{rux_dbg_info, rux_dbg_step};
 use setup::Chained;
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), RubxError> {
   let args = clip::parse();
   if args.is_present("debug-times") {
     rubx::rux_debug::put_dbg_times();
@@ -61,5 +63,6 @@ fn main() {
     pchain.push(Chained::new(&block));
     block.clear();
   }
-  runner::start(pchain);
+  runner::start(pchain).await?;
+  Ok(())
 }
