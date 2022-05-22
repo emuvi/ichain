@@ -6,7 +6,7 @@ use std::sync::{Arc, RwLock};
 use crate::setup::PassFrom;
 use crate::setup::PassOn;
 
-static DELAY: AtomicU64 = AtomicU64::new(10);
+static DELAY: AtomicU64 = AtomicU64::new(100);
 
 pub fn get_delay() -> u64 {
   rux_dbg_call!();
@@ -18,11 +18,11 @@ pub fn set_delay(millis: u64) {
   rux_dbg_reav!(DELAY.store(millis, Ordering::Release));
 }
 
-pub fn sleep_delay() {
+pub fn sleep_delay(attempt: u64) {
   rux_dbg_call!();
-  rux_dbg_reav!(std::thread::sleep(std::time::Duration::from_millis(
-    get_delay()
-  )));
+  let delay_time = rux_dbg_lets!(get_delay() * if attempt < 10 { attempt } else { 10 });
+  std::thread::sleep(std::time::Duration::from_millis(delay_time));
+  rux_dbg_reav!(());
 }
 
 #[derive(Clone, Debug)]
@@ -96,6 +96,7 @@ impl Chaining {
       pass,
       done: false,
       got: 0,
+      attempt: 1,
     })
   }
 }
@@ -129,6 +130,7 @@ pub struct GetFrom {
   pass: PassOn,
   done: bool,
   got: usize,
+  attempt: u64,
 }
 
 impl Iterator for GetFrom {
@@ -150,7 +152,8 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(Some(reader.outs.join(" ")));
           }
-          sleep_delay();
+          sleep_delay(self.attempt);
+          self.attempt += 1;
         },
         None => {
           eprintln!(
@@ -173,7 +176,8 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          sleep_delay();
+          sleep_delay(self.attempt);
+          self.attempt += 1;
         },
         None => {
           eprintln!(
@@ -197,7 +201,8 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          sleep_delay();
+          sleep_delay(self.attempt);
+          self.attempt += 1;
         },
         None => {
           eprintln!(
@@ -223,7 +228,8 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          sleep_delay();
+          sleep_delay(self.attempt);
+          self.attempt += 1;
         },
         None => {
           eprintln!(
@@ -241,7 +247,8 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(Some(reader.errs.join(" ")));
           }
-          sleep_delay();
+          sleep_delay(self.attempt);
+          self.attempt += 1;
         },
         None => {
           eprintln!(
@@ -264,7 +271,8 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          sleep_delay();
+          sleep_delay(self.attempt);
+          self.attempt += 1;
         },
         None => {
           eprintln!(
@@ -288,7 +296,8 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          sleep_delay();
+          sleep_delay(self.attempt);
+          self.attempt += 1;
         },
         None => {
           eprintln!(
@@ -314,7 +323,8 @@ impl Iterator for GetFrom {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(None);
           }
-          sleep_delay();
+          sleep_delay(self.attempt);
+          self.attempt += 1;
         },
         None => {
           eprintln!(

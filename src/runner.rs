@@ -95,10 +95,38 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
   };
   rux_dbg_step!(write_in);
 
+  let read_out = {
+    let stdout = child.stdout.unwrap();
+    let stocking_clone = stocking.clone();
+    ThreadBuilder::default()
+      .name(format!("{}_{}_out", chained_arc.alias, time))
+      .priority(ThreadPriority::Max)
+      .spawn(move |result| {
+        rux_dbg_call!(result);
+        let mut reader = BufReader::new(stdout);
+        let mut out_line = String::new();
+        loop {
+          out_line.clear();
+          let size = reader.read_line(&mut out_line).unwrap();
+          rux_dbg_step!(size);
+          if size == 0 {
+            break;
+          } else {
+            rux_dbg_step!(out_line);
+            stocking_clone.put_out(&out_line);
+          }
+        }
+        rux_dbg_reav!(());
+      })
+      .expect(&format!(
+        "Could not create the thread {}_{}_out",
+        chained_arc.alias, time
+      ))
+  };
+
   let read_err = {
     let stderr = child.stderr.unwrap();
     let stocking_clone = stocking.clone();
-
     ThreadBuilder::default()
       .name(format!("{}_{}_err", chained_arc.alias, time))
       .priority(ThreadPriority::Min)
@@ -126,41 +154,11 @@ fn execute(chained_arc: Arc<Chained>, time: usize, chaining: Chaining) {
   };
   rux_dbg_step!(read_err);
 
-  let read_out = {
-    let stdout = child.stdout.unwrap();
-    let stocking_clone = stocking.clone();
-
-    ThreadBuilder::default()
-      .name(format!("{}_{}_out", chained_arc.alias, time))
-      .priority(ThreadPriority::Max)
-      .spawn(move |result| {
-        rux_dbg_call!(result);
-        let mut reader = BufReader::new(stdout);
-        let mut out_line = String::new();
-        loop {
-          out_line.clear();
-          let size = reader.read_line(&mut out_line).unwrap();
-          rux_dbg_step!(size);
-          if size == 0 {
-            break;
-          } else {
-            rux_dbg_step!(out_line);
-            stocking_clone.put_out(&out_line);
-          }
-        }
-        rux_dbg_reav!(());
-      })
-      .expect(&format!(
-        "Could not create the thread {}_{}_out",
-        chained_arc.alias, time
-      ))
-  };
-
   if let Some(write_in) = write_in {
     write_in.join().unwrap();
   }
-  read_err.join().unwrap();
   read_out.join().unwrap();
+  read_err.join().unwrap();
   stocking.set_done();
   rux_dbg_reav!(());
 }
