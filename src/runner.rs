@@ -82,6 +82,11 @@ async fn execute(
   };
   rux_dbg_step!(read_err);
 
+  if let Some(write_in) = write_in {
+    write_in.await??;
+  }
+  read_out.await??;
+  read_err.await??;
   child.wait().await?;
   stocking.set_done().await;
   rux_dbg_reav!(Ok(()));
@@ -101,6 +106,8 @@ async fn write_in(
       while let Some(passed) = getting.next().await {
         rux_dbg_step!(passed);
         writer.write(passed.as_bytes()).await?;
+        writer.write("\n".as_bytes()).await?;
+        writer.flush().await?;
       }
     }
   }
