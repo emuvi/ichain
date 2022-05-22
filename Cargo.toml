@@ -9,5 +9,5 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "3", features = ["cargo"] }
-tokio = { version = "1", features = ["process", "rt", "macros"] }
+tokio = { version = "1", features = ["process", "rt", "macros", "sync"] }
 rubx = { version = "0" }

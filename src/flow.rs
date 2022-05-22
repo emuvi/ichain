@@ -1,7 +1,8 @@
 use rubx::{rux_dbg_call, rux_dbg_ifis, rux_dbg_lets, rux_dbg_muts, rux_dbg_reav};
+use tokio::sync::RwLock;
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use crate::setup::PassFrom;
 use crate::setup::PassOn;
@@ -59,7 +60,7 @@ impl Chaining {
     })
   }
 
-  pub fn add(&self, alias: String, time: usize) -> Stocking {
+  pub async fn add(&self, alias: String, time: usize) -> Stocking {
     rux_dbg_call!(self, alias);
     let stocking = Stocking {
       data: Arc::new(RwLock::new(Stock {
@@ -71,22 +72,20 @@ impl Chaining {
       })),
       fork: Arc::new(RwLock::new(Forked { out: 0, err: 0 })),
     };
-    self.pace.write().unwrap().push(stocking.clone());
+    self.pace.write().await.push(stocking.clone());
     rux_dbg_reav!(stocking)
   }
 
-  fn get_stocking(&self, from: &PassFrom) -> Option<Stocking> {
+  async fn get_stocking(&self, from: &PassFrom) -> Option<Stocking> {
     rux_dbg_call!(self, from);
-    rux_dbg_reav!(self
-      .pace
-      .read()
-      .unwrap()
-      .iter()
-      .find(|stocking| {
-        let stock = stocking.data.read().unwrap();
-        stock.alias == from.alias && stock.time == from.time
-      })
-      .cloned())
+    let reader = self.pace.read().await;
+    for stocking in reader.iter() {
+      let stock = stocking.data.read().await;
+      if stock.alias == from.alias && stock.time == from.time {
+        rux_dbg_reav!(Some(stocking.clone()));
+      }
+    }
+    rux_dbg_reav!(None);
   }
 
   pub fn get_from(&self, pass: PassOn) -> GetFrom {
@@ -102,23 +101,23 @@ impl Chaining {
 }
 
 impl Stocking {
-  pub fn put_err(&self, err: &str) {
+  pub async fn put_err(&self, err: &str) {
     rux_dbg_call!(self, err);
-    let mut data_writer = rux_dbg_lets!(self.data.write().unwrap());
+    let mut data_writer = rux_dbg_lets!(self.data.write().await);
     data_writer.errs.push(err.to_string());
     rux_dbg_reav!(());
   }
 
-  pub fn put_out(&self, out: &str) {
+  pub async fn put_out(&self, out: &str) {
     rux_dbg_call!(self, out);
-    let mut data_writer = rux_dbg_lets!(self.data.write().unwrap());
+    let mut data_writer = rux_dbg_lets!(self.data.write().await);
     data_writer.outs.push(out.to_string());
     rux_dbg_reav!(());
   }
 
-  pub fn set_done(&self) {
+  pub async fn set_done(&self) {
     rux_dbg_call!(self);
-    let mut data_writer = rux_dbg_lets!(self.data.write().unwrap());
+    let mut data_writer = rux_dbg_lets!(self.data.write().await);
     rux_dbg_muts!(data_writer.done, true);
     rux_dbg_reav!(());
   }
@@ -133,9 +132,8 @@ pub struct GetFrom {
   attempt: u64,
 }
 
-impl Iterator for GetFrom {
-  type Item = String;
-  fn next(&mut self) -> Option<String> {
+impl GetFrom {
+  pub async fn next(&mut self) -> Option<String> {
     rux_dbg_call!(self);
     if rux_dbg_ifis!(self.done) {
       rux_dbg_reav!(None);
@@ -145,9 +143,9 @@ impl Iterator for GetFrom {
         rux_dbg_muts!(self.done, true);
         rux_dbg_reav!(value.clone().into());
       }
-      PassOn::ExpectAllOutOf(from) => match self.from.get_stocking(from) {
+      PassOn::ExpectAllOutOf(from) => match self.from.get_stocking(from).await {
         Some(stocking) => loop {
-          let reader = stocking.data.read().unwrap();
+          let reader = stocking.data.read().await;
           if rux_dbg_ifis!(reader.done) {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(Some(reader.outs.join(" ")));
@@ -164,9 +162,9 @@ impl Iterator for GetFrom {
           rux_dbg_reav!(None);
         }
       },
-      PassOn::ExpectEachOutOf(from) => match self.from.get_stocking(from) {
+      PassOn::ExpectEachOutOf(from) => match self.from.get_stocking(from).await {
         Some(stocking) => loop {
-          let reader = stocking.data.read().unwrap();
+          let reader = stocking.data.read().await;
           if rux_dbg_ifis!(self.got < reader.outs.len()) {
             let found = rux_dbg_lets!(reader.outs[self.got].clone());
             rux_dbg_muts!(self.got, self.got + 1);
@@ -188,10 +186,10 @@ impl Iterator for GetFrom {
           rux_dbg_reav!(None);
         }
       },
-      PassOn::ExpectForkOutOf(from) => match self.from.get_stocking(from) {
+      PassOn::ExpectForkOutOf(from) => match self.from.get_stocking(from).await {
         Some(stocking) => loop {
-          let mut fork_writer = stocking.fork.write().unwrap();
-          let data_reader = stocking.data.read().unwrap();
+          let mut fork_writer = stocking.fork.write().await;
+          let data_reader = stocking.data.read().await;
           if rux_dbg_ifis!(fork_writer.out < data_reader.outs.len()) {
             let found = rux_dbg_lets!(data_reader.outs[fork_writer.out].clone());
             rux_dbg_muts!(fork_writer.out, fork_writer.out + 1);
@@ -213,9 +211,9 @@ impl Iterator for GetFrom {
           rux_dbg_reav!(None);
         }
       },
-      PassOn::ExpectNthOutOf(nth, from) => match self.from.get_stocking(from) {
+      PassOn::ExpectNthOutOf(nth, from) => match self.from.get_stocking(from).await {
         Some(stocking) => loop {
-          let reader = stocking.data.read().unwrap();
+          let reader = stocking.data.read().await;
           if rux_dbg_ifis!(*nth < reader.outs.len()) {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(Some(reader.outs[*nth].clone()));
@@ -240,9 +238,9 @@ impl Iterator for GetFrom {
           rux_dbg_reav!(None);
         }
       },
-      PassOn::ExpectAllErrOf(from) => match self.from.get_stocking(from) {
+      PassOn::ExpectAllErrOf(from) => match self.from.get_stocking(from).await {
         Some(stocking) => loop {
-          let reader = stocking.data.read().unwrap();
+          let reader = stocking.data.read().await;
           if rux_dbg_ifis!(reader.done) {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(Some(reader.errs.join(" ")));
@@ -259,9 +257,9 @@ impl Iterator for GetFrom {
           rux_dbg_reav!(None);
         }
       },
-      PassOn::ExpectEachErrOf(from) => match self.from.get_stocking(from) {
+      PassOn::ExpectEachErrOf(from) => match self.from.get_stocking(from).await {
         Some(stocking) => loop {
-          let reader = stocking.data.read().unwrap();
+          let reader = stocking.data.read().await;
           if rux_dbg_ifis!(self.got < reader.errs.len()) {
             let found = rux_dbg_lets!(reader.errs[self.got].clone());
             rux_dbg_muts!(self.got, self.got + 1);
@@ -283,10 +281,10 @@ impl Iterator for GetFrom {
           rux_dbg_reav!(None);
         }
       },
-      PassOn::ExpectForkErrOf(from) => match self.from.get_stocking(from) {
+      PassOn::ExpectForkErrOf(from) => match self.from.get_stocking(from).await {
         Some(stocking) => loop {
-          let mut fork_writer = stocking.fork.write().unwrap();
-          let data_reader = stocking.data.read().unwrap();
+          let mut fork_writer = stocking.fork.write().await;
+          let data_reader = stocking.data.read().await;
           if rux_dbg_ifis!(fork_writer.err < data_reader.errs.len()) {
             let found = rux_dbg_lets!(data_reader.errs[fork_writer.err].clone());
             rux_dbg_muts!(fork_writer.err, fork_writer.err + 1);
@@ -308,9 +306,9 @@ impl Iterator for GetFrom {
           rux_dbg_reav!(None);
         }
       },
-      PassOn::ExpectNthErrOf(nth, from) => match self.from.get_stocking(from) {
+      PassOn::ExpectNthErrOf(nth, from) => match self.from.get_stocking(from).await {
         Some(stocking) => loop {
-          let reader = stocking.data.read().unwrap();
+          let reader = stocking.data.read().await;
           if rux_dbg_ifis!(*nth < reader.errs.len()) {
             rux_dbg_muts!(self.done, true);
             rux_dbg_reav!(Some(reader.errs[*nth].clone()));

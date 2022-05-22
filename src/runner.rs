@@ -35,17 +35,19 @@ async fn execute(
   chaining: Chaining,
 ) -> Result<(), RubxError> {
   rux_dbg_call!(chained_arc, chaining);
-  let stocking = chaining.add(chained_arc.alias.clone(), time);
+  let stocking = chaining.add(chained_arc.alias.clone(), time).await;
   let mut command = Command::new(&chained_arc.name);
-  chained_arc.ways.iter().for_each(|(to, on)| {
+  for (to, on) in &chained_arc.ways {
     rux_dbg_step!(to, on);
     if to == &PassTo::Param {
-      for passed in chaining.get_from(on.clone()) {
+      let mut getting = chaining.get_from(on.clone());
+      while let Some(passed) = getting.next().await {
         rux_dbg_step!(passed);
         command.arg(passed);
       }
     }
-  });
+  }
+
   let mut child = command
     .stdin(if chained_arc.has_inputs() {
       Stdio::piped()
@@ -81,7 +83,7 @@ async fn execute(
   rux_dbg_step!(read_err);
 
   child.wait().await?;
-  stocking.set_done();
+  stocking.set_done().await;
   rux_dbg_reav!(Ok(()));
 }
 
@@ -95,7 +97,8 @@ async fn write_in(
     rux_dbg_step!(to, on);
     if to == &PassTo::Input {
       rux_dbg_step!(to);
-      for passed in chaining_clone.get_from(on.clone()) {
+      let mut getting = chaining_clone.get_from(on.clone());
+      while let Some(passed) = getting.next().await {
         rux_dbg_step!(passed);
         writer.write(passed.as_bytes()).await?;
       }
@@ -108,7 +111,7 @@ async fn read_out(stdout: ChildStdout, stocking_clone: Stocking) -> Result<(), R
   let mut reader = BufReader::new(stdout).lines();
   while let Some(line) = reader.next_line().await? {
     rux_dbg_step!(line);
-    stocking_clone.put_out(&line);
+    stocking_clone.put_out(&line).await;
   }
   rux_dbg_reav!(Ok(()));
 }
@@ -117,7 +120,7 @@ async fn read_err(stderr: ChildStderr, stocking_clone: Stocking) -> Result<(), R
   let mut reader = BufReader::new(stderr).lines();
   while let Some(line) = reader.next_line().await? {
     rux_dbg_step!(line);
-    stocking_clone.put_err(&line);
+    stocking_clone.put_err(&line).await;
   }
   rux_dbg_reav!(Ok(()));
 }
