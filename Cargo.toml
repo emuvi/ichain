@@ -10,4 +10,3 @@ edition = "2021"
 [dependencies]
 clap = { version = "3", features = ["cargo"] }
 rubx = { version = "0" }
-thread-priority = "0.8"
